@@ -66,6 +66,11 @@ class Scene1 extends Phaser.Scene {
         this.enemy1.setBounce(1, 1);
         this.enemy1.setVelocityX(300);
         this.enemy1.setVelocityY(300);
+        this.physics.add.collider(this.enemy1, this.player1, () => {
+            // Do something when they collide!
+        })
+
+        this.player1.setImmovable(true);
     }
 
     update() {
