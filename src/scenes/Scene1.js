@@ -17,6 +17,9 @@ class Scene1 extends Phaser.Scene {
         this.load.spritesheet('powerup', '../assets/lightning-t.png', {
             frameWidth: 32, frameHeight: 32
         });
+
+        // Load enemy
+        this.load.image('enemy1', '../assets/enemy1.png');
     }
 
     create() {
@@ -56,6 +59,13 @@ class Scene1 extends Phaser.Scene {
             powerup.destroy();
             this.playerSpeed = 800;
         });
+
+        // Set enemy
+        this.enemy1 = this.physics.add.sprite(500, 100, 'enemy1');
+        this.enemy1.setCollideWorldBounds(true);
+        this.enemy1.setBounce(1, 1);
+        this.enemy1.setVelocityX(300);
+        this.enemy1.setVelocityY(300);
     }
 
     update() {
