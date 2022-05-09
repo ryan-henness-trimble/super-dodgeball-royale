@@ -3,7 +3,7 @@ window.onload = function() {
         width: 350,
         height: 550,
         backgroundColor: 0x0000ff,
-        scene: [Scene1, Scene2],
+        scene: [DevSceneSelector, Scene1, Scene2],
         pixelArt: true,
         physics: {
             default: 'arcade',
