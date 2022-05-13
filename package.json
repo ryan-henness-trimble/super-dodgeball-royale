@@ -5,7 +5,8 @@
   "main": "src/index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "http-server ./src -c-1 -a localhost -p 8080"
+    "mkbundle": "browserify ./src/client/ClientBundleDefinition.js -o ./src/client/bundle.js",
+    "start": "http-server ./src/client -c-1 -a localhost -p 8080"
   },
   "repository": {
     "type": "git",
