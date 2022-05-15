@@ -1,4 +1,6 @@
 const Matter = require('matter-js');
+const { MapProvider } = require('../shared/MapProvider');
+const { gameevents } = require('../shared/gameevents');
 
 const Engine = Matter.Engine;
 const Events = Matter.Events;
@@ -26,54 +28,81 @@ const PLAYER_CATEGORY = 0x000000002;
 const WORLD_MASK = PLAYER_CATEGORY;
 const PLAYER_MASK = WORLD_CATEGORY;
 
+const PLAYER_VELOCITY = 2.5;
+const SHIELD_ANGULAR_VELOCITY = 0.075;
+const INITIAL_HP = 3;
+const IFRAME_DURATION_ON_HIT = 2000;
+
 // 3 is a good speed to keep the balls at permanently
 // slow enough to be able to process, but fast enough to be challenging when there are a lot of them
-const BALL_SPEED = 3;
+const BALL_SPEED = 3.25;
 
 // TODO maybe want to use large simulation units, then scale down for rendering
 // e.g. player radius = 40, ball radius = 30, render scale 0.5
 
+// central file for game constants
+// balls spawning at intervals
+// specification of initial conditions
+//  wall locations
+//  ball spawn points
+//  player starting points for up to 10 ppl
+// networking flow
+
+// natural bounds: 700x700
+// list of rectangles: [x, y, w, h, angle] relative to 0,0 of natural bounds
+// ball spawn: x,y
+// player spawns: [x,y] x10
+
 class Simulation {
     
     constructor() {
+        this.mapProvider = new MapProvider();
+
+        this.ballSpawnPoint = null;
+
         this.engine = null;
         this.playersById = new Map();
         this.ballsById = new Map();
 
         this.hitboxIdsToPlayerIds = new Map();
 
-        this.PLAYER_VELOCITY = 4;
-        this.ANGULAR_VELOCITY = 0.075;
+        this.playersHit = [];
+        this.playersToEliminate = [];
+        this.iframePlayers = [];
+        this.stepEvents = [];
+
+        this.playerEliminationOrder = [];
+
+        this.roundEnded = false;
     }
 
-    reset() {
-        const bounds = [ // x, y, w, h
-            [...toWindowCoordinates(350, -50), 900, 100], // top
-            [...toWindowCoordinates(350, 750), 900, 100], // bottom
-            [...toWindowCoordinates(-50, 350), 100, 900], // left
-            [...toWindowCoordinates(750, 350), 100, 900] // right
-        ];
+    // map name, # players
+    reset(mapName, numberOfPlayers) {
+        const gameMap = this.mapProvider.getMap(mapName);
 
-        const playerPositions = [
-            [...toWindowCoordinates(100, 100)],
-            [...toWindowCoordinates(600, 600)]
-        ];
+        this.ballSpawnPoint = gameMap.ballSpawn;
 
-        // potential params above
+        this.roundEnded = false;
 
         this.playersById.clear();
         this.ballsById.clear();
+        this.playersHit = [];
+        this.playersToEliminate = [];
+        this.iframePlayers = [];
+        this.stepEvents = [];
 
-        const wallBodies = bounds.map(b => makeWall(...b));
+        this.playerEliminationOrder = [];
 
-        const players = playerPositions.map(p => makePlayer(...p));
+        const wallBodies = gameMap.walls.map(w => makeWall(w.x, w.y, w.w, w.h, w.angle));
+
+        const players = gameMap.playerSpawns.slice(0, numberOfPlayers).map(p => makePlayer(p.x, p.y));
         players.forEach(p => {
             this.playersById.set(p.id, p);
             this.hitboxIdsToPlayerIds.set(p.hitboxId, p.id);
         });
 
         this.engine = Engine.create();
-        this.engine.world.gravity.y = 0;
+        this.engine.gravity.y = 0;
 
         Composite.add(this.engine.world, wallBodies);
         Composite.add(this.engine.world, players.map(p => p.body));
@@ -83,14 +112,11 @@ class Simulation {
         // output below
         
         return {
-            walls: bounds.map(([x, y, w, h]) => {
-                return {
-                    x, y, w, h
-                };
-            }),
+            walls: gameMap.walls, // { x, y, w, h, angle }
             players: players.map(p => {
                 return {
                     id: p.id,
+                    hp: p.hp,
                     x: p.body.position.x,
                     y: p.body.position.y,
                     angle: p.body.angle,
@@ -106,42 +132,50 @@ class Simulation {
         //     up, down, left, right, cw, ccw
         // }
 
+        this.stepEvents = [];
+
+        if (this.roundEnded) {
+            return;
+        }
+
         commands.forEach(c => {
             if (c.hasOwnProperty('spawnBall')) {
-                const body = makeBall(...toWindowCoordinates(350, 350));
-                Body.setVelocity(body, { x: 0, y: -BALL_SPEED });
-                const ball = {
-                    id: body.id,
-                    body: body
-                };
-
-                this.ballsById.set(ball.id, ball);
-
-                Composite.add(this.engine.world, body);
-
+                this.spawnBall(this.ballSpawnPoint, this.engine.world);
                 return;
             }
 
             const player = this.playersById.get(c.id);
 
+            if (player.isEliminated) {
+                return;
+            }
+
             const velocity = {
-                x: getMovementDirection(c.left, c.right) * this.PLAYER_VELOCITY,
-                y: getMovementDirection(c.up, c.down) * this.PLAYER_VELOCITY
+                x: getMovementDirection(c.left, c.right) * PLAYER_VELOCITY,
+                y: getMovementDirection(c.up, c.down) * PLAYER_VELOCITY
             };
 
-            const rotation = getMovementDirection(c.ccw, c.cw) * this.ANGULAR_VELOCITY;
+            const rotation = getMovementDirection(c.ccw, c.cw) * SHIELD_ANGULAR_VELOCITY;
 
             Body.setVelocity(player.body, velocity);
             Body.setAngularVelocity(player.body, rotation);
         });
 
         Engine.update(this.engine, timestepMs);
+
+        this.updateIFrames(timestepMs);
+        this.resolveHits();
+        this.resolveEliminations();
+        this.checkRoundOver();
     }
 
     getState() {
         const players = Array.from(this.playersById.entries()).map(([id, p]) => {
             return {
                 id: id,
+                hp: p.hp,
+                hasIFrames: p.iframeDuration > 0,
+                isEliminated: p.isEliminated,
                 x: p.body.position.x,
                 y: p.body.position.y,
                 angle: p.body.angle
@@ -155,9 +189,12 @@ class Simulation {
             };
         });
 
+        // possible types of events:
+        // ball spawning, ball spawned, player hit, player eliminated, round over
         return {
             players: players,
-            balls: balls
+            balls: balls,
+            events: this.stepEvents
         };
     }
 
@@ -169,8 +206,10 @@ class Simulation {
             this.ensureBallKeepsMoving(p.bodyA);
             this.ensureBallKeepsMoving(p.bodyB);
 
-            if (!this.ballsById.has(p.bodyA.Id) || !this.ballsById.has(p.bodyB.Id)) {
-                // console.log(p);
+            const hitCheck = this.playerWasHitByBall(p.bodyA, p.bodyB)
+            if (hitCheck.hit) {
+                const playerId = this.hitboxIdsToPlayerIds.get(hitCheck.playerHitbox.id);
+                this.playersHit.push(this.playersById.get(playerId));
             }
         });
     }
@@ -189,6 +228,84 @@ class Simulation {
 
             Body.setVelocity(ballBody, velocity);
         }
+    }
+
+    playerWasHitByBall(bodyA, bodyB) {
+        const bodies = [bodyA, bodyB];
+
+        const balls = bodies.filter(b => this.ballsById.has(b.id));
+        const players = bodies.filter(b => this.hitboxIdsToPlayerIds.has(b.id));
+
+        if (balls.length === 1 && players.length === 1) {
+            return {
+                hit: true,
+                ball: balls[0],
+                playerHitbox: players[0]
+            };
+        } else {
+            return {
+                hit: false
+            };
+        }
+    }
+
+    resolveHits() {
+        this.playersHit.filter(p => p.iframeDuration === 0).forEach(player => {
+            player.hp -= 1;
+
+            if (player.hp <= 0) {
+                this.playersToEliminate.push(player);
+            } else {
+                player.iframeDuration = IFRAME_DURATION_ON_HIT;
+                this.iframePlayers.push(player);
+                this.stepEvents.push(gameevents.createPlayerHit(player.id));
+            }
+        });
+
+        this.playersHit = [];
+    }
+
+    resolveEliminations() {
+        this.playersToEliminate.forEach(player => {
+            Composite.remove(this.engine.world, player.body);
+            player.isEliminated = true;
+
+            this.playerEliminationOrder.push(player);
+        });
+
+        this.playersToEliminate = [];
+    }
+
+    updateIFrames(timestepMs) {
+        this.iframePlayers.forEach(player => {
+            player.iframeDuration = Math.max(player.iframeDuration - timestepMs, 0);
+        });
+
+        this.iframePlayers = this.iframePlayers.filter(p => p.iframeDuration > 0);
+    }
+
+    checkRoundOver() {
+        if (this.playerEliminationOrder.length >= this.playersById.size - 1) {
+            this.stepEvents.push(gameevents.createRoundOver());
+            this.roundEnded = true;
+        }
+    }
+
+    spawnBall(spawnPoint, world) {
+        const angle = 2 * Math.PI * Math.random();
+        const xVel = BALL_SPEED * Math.cos(angle);
+        const yVel = BALL_SPEED * Math.sin(angle);
+        
+        const body = makeBall(spawnPoint.x, spawnPoint.y);
+        Body.setVelocity(body, { x: xVel, y: yVel });
+        const ball = {
+            id: body.id,
+            body: body
+        };
+    
+        this.ballsById.set(ball.id, ball);
+    
+        Composite.add(world, body);
     }
 }
 
@@ -229,12 +346,13 @@ function makePlayer(x, y) {
         }
     });
 
-    console.log(player);
-
     return {
         id: player.id,
         hitboxId: hitbox.id,
-        body: player
+        iframeDuration: 0,
+        body: player,
+        hp: INITIAL_HP,
+        isEliminated: false
     };
 }
 
@@ -272,8 +390,11 @@ function toWindowCoordinates(x, y) {
     return [x + 290, y + 10];
 }
 
-function makeWall(x, y, w, h) {
-    let wall = Bodies.rectangle(x, y, w, h, { isStatic: true });
+function makeWall(x, y, w, h, angle) {
+    let wall = Bodies.rectangle(x, y, w, h, {
+        angle: angle,
+        isStatic: true
+    });
 
     wall.collisionFilter = {
         group: GRP_WORLD,

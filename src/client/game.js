@@ -2,7 +2,7 @@ window.onload = function() {
     let config = {
         width: 1280,
         height: 720,
-        backgroundColor: 0x48B0FF,
+        backgroundColor: 0x555555,
         scene: [TestingScene],
         pixelArt: true,
         physics: {
