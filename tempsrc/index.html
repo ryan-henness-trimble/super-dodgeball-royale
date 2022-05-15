@@ -1,0 +1,46 @@
+<html>
+    <head>
+        <script type="text/javascript" src="cb.js"></script>
+        
+    </head>
+    <body>
+        <button id="create">Create Lobby</button>
+        <input id="codefield"></input>
+        <button id="join">Join Lobby</button>
+        <button id="debug">Log</button>
+        <div id="lobbystate"></div>
+        <script>
+            const { GameClient } = window.GameClient;
+
+            const onLobbyUpdate = function(ls) {
+                const d = document.getElementById('lobbystate');
+                d.textContent = JSON.stringify(ls, null, 2);
+            }
+
+            const myClient = new GameClient("ws://localhost:8090",
+                onLobbyUpdate,
+                () => {},
+                () => {}
+            );
+
+            document.getElementById('create').onclick = function() {
+                console.log('clicked');
+                myClient.createLobby((msg) => {
+                    if (msg.success) {
+                        myClient.joinLobby(msg.lobbyCode, () => console.log('success'), () => console.log('fail'));
+                    }
+                });
+                console.log('end clicked');
+            };
+            document.getElementById('join').onclick = function() {
+                const code = document.getElementById('codefield').value;
+                myClient.joinLobby(code, () => console.log('success'), () => console.log('fail'));
+            }
+
+            document.getElementById('debug').onclick = function() {
+                myClient.socket.emit('a', (x) => console.log(x));
+            }
+        </script>
+        <!-- <script type="text/javascript" src="sim.js"></> -->
+    </body>
+</html>
