@@ -4,8 +4,22 @@
         <script type="text/javascript" src="phaser.min.js"></script>
         <script type="text/javascript" src="bundle.js"></script>
         <script type="text/javascript" src="game.js"></script>
+        <script type="text/javascript" src="scenes/SceneMain.js"></script>
+        <script type="text/javascript" src="scenes/SceneHome.js"></script>
+        <script type="text/javascript" src="scenes/SceneLobby.js"></script>
+        <script type="text/javascript" src="scenes/SceneActiveGame.js"></script>
         <script type="text/javascript" src="scenes/TestingScene.js"></script>
     </head>
     <body>
+        <div id="phaser-container"></div>
+        
+        <div id="lobby-controls" style="display:none">
+            <button id="create-lobby-btn">Create Lobby</button>
+            <input id="lobby-code-input" />
+            <button id="join-lobby-btn">Join Lobby</button>
+        </div>
+        <div>
+            <button id="log-debug-info">Log Debug Info</button>
+        </div>
     </body>
 </html>

@@ -1,7 +1,6 @@
 const { Server } = require('socket.io');
 const { LobbyMembership } = require('./LobbyMembership');
-const { channels } = require('../shared/channels');
-const { lobbycommands } = require('../shared/lobbycommands');
+const { Messaging } = require('../shared/Messaging');
 
 class GameServer {
 
@@ -34,31 +33,41 @@ class GameServer {
             cback(this.lobbies.getDebugInfo());
         });
 
-        socket.on(channels.CREATE_LOBBY, () => {
+        socket.on(Messaging.Channels.CREATE_LOBBY, () => {
             console.log('create lobby requested');
 
             const lobbyCode = this.lobbies.createLobby(socket.id);
 
-            socket.emit(channels.LOBBY_CREATED, {
+            socket.emit(Messaging.Channels.LOBBY_CREATED, {
                 success: true,
                 lobbyCode: lobbyCode
             });
         });
 
-        socket.on(channels.JOIN_LOBBY, (lobbyCode) => {
+        socket.on(Messaging.Channels.JOIN_LOBBY, (lobbyCode) => {
             if (this.lobbies.lobbyExists(lobbyCode)) {
                 this.lobbies.addPlayerToLobby(socket.id, lobbyCode);
 
                 socket.join(lobbyCode);
 
-                socket.emit(channels.LOBBY_JOINED, { success: true });
+                socket.emit(Messaging.Channels.LOBBY_JOINED, { success: true });
             } else {
-                socket.emit(channels.LOBBY_JOINED, { success: false });
+                socket.emit(Messaging.Channels.LOBBY_JOINED, { success: false });
             }
         });
 
-        socket.on(channels.LOBBY_COMMANDS, (msg) => {
-            this.handleLobbyCommand(socket.id, msg);
+        socket.on(Messaging.Channels.LOBBY_COMMANDS, (msg) => {
+            this.handleLobbyCommand(socket, msg);
+        });
+
+        socket.on(Messaging.Channels.GAME_COMMANDS, (msg) => {
+            this.handleGameCommand(socket, msg);
+        })
+
+        socket.on(Messaging.Channels.SIM_COMMANDS, (msg) => {
+            const lobby = this.lobbies.getLobbyByPlayer(socket.id);
+            const command = Messaging.SimCommands.fromNetworkFormat(msg);
+            lobby.game.receiveCommand(socket.id, command);
         });
 
         socket.on('disconnect', () => {
@@ -66,32 +75,90 @@ class GameServer {
 
             this.lobbies.removeUnusedLobbiesHostedByPlayer(socket.id);
 
+            // TODO centralize logic for cleaning up from a player leaving
             if (this.lobbies.playerIsInALobby(socket.id)) {
                 const lobby = this.lobbies.getLobbyStateByPlayer(socket.id);
                 this.lobbies.removePlayerFromLobby(socket.id, lobby.code);
 
                 if (this.lobbies.lobbyExists(lobby.code)) {
-                    this.broadcastLobbyState(lobby.code);
+                    const newState = this.lobbies.getLobbyState(lobby.code);
+                    const msg = Messaging.LobbyUpdates.createNewState(newState);
+                    this.broadcastLobbyUpdate(lobby.code, msg);
                 }
             }
         });
     }
 
-    handleLobbyCommand(playerId, msg) {
+    handleLobbyCommand(socket, msg) {
+        const playerId = socket.id;
         switch (msg.type) {
-            case lobbycommands.ACK_JOIN:
+            case Messaging.LobbyCommands.ACK_JOIN:
                 const lobby = this.lobbies.getLobbyStateByPlayer(playerId);
-                this.broadcastLobbyState(lobby.code);
+                const msg = Messaging.LobbyUpdates.createNewState(lobby);
+                this.broadcastLobbyUpdate(lobby.code, msg);
                 break;
-            case lobbycommands.LEAVE_LOBBY:
+            case Messaging.LobbyCommands.LEAVE_LOBBY:
                 break;
-            case lobbycommands.START_GAME:
+            case Messaging.LobbyCommands.START_GAME:
+                this.handleStartGameCommand(playerId);
                 break;
         }
     }
 
-    broadcastLobbyState(lobbyCode) {
-        this.io.to(lobbyCode).emit(channels.LOBBY_UPDATES, this.lobbies.getLobbyState(lobbyCode));
+    handleGameCommand(socket, msg) {
+        const playerId = socket.id;
+        switch (msg.type) {
+            case Messaging.GameCommands.CLIENT_READY:
+                this.handlePlayerReadyCommand(playerId);
+                break;
+        }
+    }
+
+    handleStartGameCommand(playerId) {
+        if (!this.lobbies.playerIsInALobby(playerId)) {
+            return;
+        }
+
+        const lobby = this.lobbies.getLobbyByPlayer(playerId);
+
+        const initialState = lobby.setUpNewGame();
+
+        const msg = Messaging.LobbyUpdates.createGameStarting(initialState.walls, initialState.players);
+        this.broadcastLobbyUpdate(lobby.code, msg);
+
+        // need:
+        // register listeners for each player's commands
+    }
+
+    handlePlayerReadyCommand(playerId) {
+        if (!this.lobbies.playerIsInALobby(playerId)) {
+            return;
+        }
+
+        const lobby = this.lobbies.getLobbyByPlayer(playerId);
+
+        lobby.game.markPlayerAsReady(playerId);
+
+        if (lobby.game.allPlayersReady()) {
+            console.log('starting loop');
+            const deliveryCallback = (renderState) => {
+                this.broadcastSimUpdate(lobby.code, renderState);
+            };
+
+            lobby.game.startGameLoop(deliveryCallback);
+        }
+    }
+
+    broadcastLobbyUpdate(lobbyCode, msg) {
+        this.io.to(lobbyCode).emit(Messaging.Channels.LOBBY_UPDATES, msg);
+    }
+
+    broadcastGameUpdate(lobbyCode, msg) {
+        this.io.to(lobbyCode).emit(Messaging.Channels.GAME_UPDATES, msg);
+    }
+
+    broadcastSimUpdate(lobbyCode, msg) {
+        this.io.to(lobbyCode).emit(Messaging.Channels.SIM_UPDATES, msg);
     }
 }
 

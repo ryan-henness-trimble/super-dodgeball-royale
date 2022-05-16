@@ -40,19 +40,6 @@ const BALL_SPEED = 3.25;
 // TODO maybe want to use large simulation units, then scale down for rendering
 // e.g. player radius = 40, ball radius = 30, render scale 0.5
 
-// central file for game constants
-// balls spawning at intervals
-// specification of initial conditions
-//  wall locations
-//  ball spawn points
-//  player starting points for up to 10 ppl
-// networking flow
-
-// natural bounds: 700x700
-// list of rectangles: [x, y, w, h, angle] relative to 0,0 of natural bounds
-// ball spawn: x,y
-// player spawns: [x,y] x10
-
 class Simulation {
     
     constructor() {
@@ -76,9 +63,10 @@ class Simulation {
         this.roundEnded = false;
     }
 
-    // map name, # players
     reset(mapName, numberOfPlayers) {
         const gameMap = this.mapProvider.getMap(mapName);
+
+        this.ballSpawnTiming = new BallSpawnTiming();
 
         this.ballSpawnPoint = gameMap.ballSpawn;
 
@@ -128,7 +116,7 @@ class Simulation {
 
     step(commands, timestepMs) {
         // {
-        //     playerId: 0,
+        //     id: 0,
         //     up, down, left, right, cw, ccw
         // }
 
@@ -139,11 +127,6 @@ class Simulation {
         }
 
         commands.forEach(c => {
-            if (c.hasOwnProperty('spawnBall')) {
-                this.spawnBall(this.ballSpawnPoint, this.engine.world);
-                return;
-            }
-
             const player = this.playersById.get(c.id);
 
             if (player.isEliminated) {
@@ -160,6 +143,13 @@ class Simulation {
             Body.setVelocity(player.body, velocity);
             Body.setAngularVelocity(player.body, rotation);
         });
+
+        if (this.ballSpawnTiming.shouldSpawnBall()) {
+            this.spawnBall(this.ballSpawnPoint, this.engine.world);
+            this.ballSpawnTiming.ballWasSpawned();
+        }
+
+        this.ballSpawnTiming.step(timestepMs);
 
         Engine.update(this.engine, timestepMs);
 
@@ -295,7 +285,7 @@ class Simulation {
         const angle = 2 * Math.PI * Math.random();
         const xVel = BALL_SPEED * Math.cos(angle);
         const yVel = BALL_SPEED * Math.sin(angle);
-        
+
         const body = makeBall(spawnPoint.x, spawnPoint.y);
         Body.setVelocity(body, { x: xVel, y: yVel });
         const ball = {
@@ -309,18 +299,27 @@ class Simulation {
     }
 }
 
-class IdGenerator {
+class BallSpawnTiming {
 
     constructor() {
-        this.currentValue = 0;
+        this.INTERVAL_TIMING_MS = 2000;
+        this.nextSpawnTimingMs = this.INTERVAL_TIMING_MS;
     }
 
-    generate() {
-        return this.currentValue++;
+    timeUntilNextSpawn() {
+        return this.nextSpawnTimingMs;
     }
 
-    reset() {
-        this.currentValue = 0;
+    step(timeMs) {
+        this.nextSpawnTimingMs -= timeMs;
+    }
+
+    shouldSpawnBall() {
+        return this.nextSpawnTimingMs <= 0;
+    }
+
+    ballWasSpawned() {
+        this.nextSpawnTimingMs = this.INTERVAL_TIMING_MS;
     }
 }
 

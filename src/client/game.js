@@ -1,9 +1,10 @@
 window.onload = function() {
     let config = {
-        width: 1280,
-        height: 720,
-        backgroundColor: 0x555555,
-        scene: [TestingScene],
+        parent: 'phaser-container',
+        width: SDRGame.GameConstants.WINDOW_WIDTH,
+        height: SDRGame.GameConstants.WINDOW_HEIGHT,
+        backgroundColor: 0x151515,
+        scene: [SceneMain, SceneHome, SceneLobby, SceneActiveGame],
         pixelArt: true,
         physics: {
             default: 'arcade',
@@ -11,12 +12,12 @@ window.onload = function() {
                 debug: false
             },
             matter: {
-                autoUpdate: true,
-                debug: true
+                autoUpdate: false,
+                debug: false
             }
         },
         fps: {
-          target: 60,
+          target: SDRGame.GameConstants.TARGET_FPS,
           forceSetTimeOut: true
         }
     };

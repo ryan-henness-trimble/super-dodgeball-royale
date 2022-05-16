@@ -1,5 +1,6 @@
 const { v4 } = require('uuid');
 const uuid = v4;
+const { GameTracker } = require('./GameTracker');
 
 class LobbyMembership {
 
@@ -20,13 +21,21 @@ class LobbyMembership {
         });
     }
 
+    getLobby(lobbyCode) {
+        return this.lobbies.get(lobbyCode);
+    }
+
+    getLobbyByPlayer(playerId) {
+        const code = this.playerIdToLobbyCode.get(playerId);
+        return this.lobbies.get(code);
+    }
+
     getLobbyState(lobbyCode) {
-        return this.lobbies.get(lobbyCode).toDataObject();
+        return this.getLobby(lobbyCode)?.toDataObject();
     }
 
     getLobbyStateByPlayer(playerId) {
-        const code = this.playerIdToLobbyCode.get(playerId);
-        return this.lobbies.get(code).toDataObject();
+        return this.getLobbyByPlayer(playerId)?.toDataObject();
     }
 
     addPlayerToLobby(playerId, lobbyCode) {
@@ -47,7 +56,7 @@ class LobbyMembership {
         this.playerIdToLobbyCode.delete(playerId);
 
         if (lobby.isEmpty()) {
-            this.lobbies.delete(lobbyCode);
+            this.deleteLobby(lobbyCode);
         }
 
         return true;
@@ -58,7 +67,7 @@ class LobbyMembership {
             .filter(([_, lobby]) => lobby.isEmpty() && lobby.hostId === playerId)
             .map(([code, _]) => code);
         
-        playerUnusedLobbies.forEach((code) => this.lobbies.delete(code));
+        playerUnusedLobbies.forEach((code) => this.deleteLobby(code));
     }
 
     createLobby(hostId) {
@@ -76,6 +85,14 @@ class LobbyMembership {
     playerIsInALobby(playerId) {
         return this.playerIdToLobbyCode.has(playerId);
     }
+
+    deleteLobby(lobbyCode) {
+        if (this.lobbies.has(lobbyCode)) {
+            const lobby = this.lobbies.get(lobbyCode);
+            lobby.cleanupForDeletion();
+            this.lobbies.delete(lobbyCode);
+        }
+    }
 }
 
 class Lobby {
@@ -85,10 +102,11 @@ class Lobby {
         this.members = [];
         this.hostId = hostId;
         this.lastPlayerNumber = 1;
+        this.game = new GameTracker();
     }
 
     addMember(playerId) {
-        const newMember = createLobbyMemberObject(playerId, `Player ${this.lastPlayerNumber}`);
+        const newMember = createLobbyMemberObject(playerId, `Player ${this.lastPlayerNumber}`, getRandomColor());
         this.members.push(newMember);
         this.lastPlayerNumber += 1;
     }
@@ -114,10 +132,25 @@ class Lobby {
         return this.members.length === 0;
     }
 
+    setUpNewGame() {
+        return this.game.setUpNewGame(this.members);
+    }
+
+    cleanupForDeletion() {
+        this.game.stopGameLoop();
+    }
+
     toDataObject() {
         return {
             code: this.code,
-            members: this.members.map(m => m.name)
+            host: this.hostId,
+            members: this.members.map(m => {
+                return {
+                    id: m.playerId,
+                    name: m.name,
+                    color: m.color
+                };
+            })
         };
     }
 
@@ -126,11 +159,43 @@ class Lobby {
     }
 }
 
-function createLobbyMemberObject(playerId, name) {
+function createLobbyMemberObject(playerId, name, color) {
     return {
         playerId: playerId,
-        name: name
+        name: name,
+        color: color
     };
+}
+
+function getRandomColor() {
+    const letters = '6789ABCDEF';
+    // let color = '#';
+    let color = '';
+    for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 10)];
+    }
+    return parseInt(color, 16);
+}
+
+function hsvToRgb(h, s, v) {
+    let r, g, b;
+  
+    let i = Math.floor(h * 6);
+    let f = h * 6 - i;
+    let p = v * (1 - s);
+    let q = v * (1 - f * s);
+    let t = v * (1 - (1 - f) * s);
+  
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+  
+    return [ r * 255, g * 255, b * 255 ];
 }
 
 exports.LobbyMembership = LobbyMembership;

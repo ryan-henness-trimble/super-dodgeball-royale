@@ -1,5 +1,9 @@
 const { gameconstants } = require('../shared/gameconstants');
 
+// list of rectangles: [x, y, w, h, angle] relative to 0,0 of natural bounds
+// ball spawn: x,y
+// player spawns: [x,y]
+
 const allMaps = [
     {
         name: 'basic',

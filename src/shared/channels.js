@@ -25,6 +25,10 @@ const channels = {
     LOBBY_UPDATES: 'lobby-updates',
     // players in lobby: names, avatars
 
+    // {
+    //     type: 'game-starting'
+    //     data: sim initial state
+    // }
     GAME_UPDATES: 'game-updates',
     GAME_COMMANDS: 'game-commands',
 
