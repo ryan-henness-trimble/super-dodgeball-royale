@@ -44,9 +44,8 @@ class GameClient {
     }
 
     sendSimCommand(command) {
-        // TODO try volatile + timeout
         const networkCommand = Messaging.SimCommands.toNetworkFormat(command);
-        this.socket.volatile.emit(Messaging.Channels.SIM_COMMANDS, networkCommand);
+        this.socket.emit(Messaging.Channels.SIM_COMMANDS, networkCommand);
     }
 
     subscribeToActiveGame(onGameUpdate, onSimUpdate) {
