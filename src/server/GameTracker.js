@@ -19,6 +19,8 @@ class GameTracker {
     }
 
     setUpNewGame(players) {
+        this.stopGameLoop();
+
         this.readyPlayers = [];
 
         const playerIds = players.map(p => p.playerId);

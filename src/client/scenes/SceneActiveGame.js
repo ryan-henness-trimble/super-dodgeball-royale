@@ -14,9 +14,7 @@ class SceneActiveGame extends Phaser.Scene {
 
         this.add.text(20, 20, 'Active Game');
 
-        this.playerColors = new Map();
-
-        this.initializeGame(initialState);
+        this.renderInitialGameState(initialState);
 
         this.registerInputKeys();
 
@@ -56,24 +54,25 @@ class SceneActiveGame extends Phaser.Scene {
         this.network.sendSimCommand(inputs);
     }
 
-    initializeGame(arena) {
+    renderInitialGameState(arena) {
         arena.walls.forEach(wall => this.add.rectangle(wall.x, wall.y, wall.w, wall.h, 0x000000));
 
         this.playersById = new Map();
 
         arena.players.forEach((p, i) => {
-            this.playerColors.set(p.id, p.color);
-            const body = this.add.circle(0, 0, p.r, p.color);
             const shield = this.add.rectangle(0, -15, 25, 30, 0x48B0FF);
+            const body = this.add.circle(0, 0, p.r, p.color);
             const label = this.add.text(0, 0, p.name, { fill: '#ffffff' });
 
-            const playerGraphic = this.add.container(p.x, p.y, [body, shield, label]);
+            const playerGraphic = this.add.container(p.x, p.y, [shield, body, label]);
 
             const player = {
                 id: p.id,
+                name: p.name,
+                color: p.color,
                 graphic: playerGraphic,
                 hitboxGraphic: body,
-                hpLabel: this.add.text(20, 100 + i*30, formatHPLabelString(p.name, p.hp))
+                hpLabel: this.add.text(20, 100 + i*30, this.formatHPLabelString(p.name, p.hp))
             };
 
             this.playersById.set(p.id, player);
@@ -102,14 +101,14 @@ class SceneActiveGame extends Phaser.Scene {
             player.graphic.setPosition(p.x, p.y);
             player.graphic.setRotation(p.angle);
 
-            player.hpLabel.setText(formatHPLabelString(p.id, p.hp));
+            player.hpLabel.setText(this.formatHPLabelString(player.name, p.hp));
 
             if (p.isEliminated) {
                 player.hitboxGraphic.setFillStyle(0x000000);
             } else if (p.hasIFrames) {
                 player.hitboxGraphic.setFillStyle(0xbb0000);
             } else {
-                player.hitboxGraphic.setFillStyle(this.playerColors.get(p.id));
+                player.hitboxGraphic.setFillStyle(player.color);
             }
         });
 
@@ -123,8 +122,25 @@ class SceneActiveGame extends Phaser.Scene {
             }
         });
 
-        const nextEvents = this.eventHistory.events.concat(state.events.map(e => formatEventAsString(e)));
+        const nextEvents = this.eventHistory.events.concat(state.events.map(e => this.formatEventAsString(e)));
         this.eventHistory.events = nextEvents;
         this.eventHistory.label.setText(nextEvents.join('\n'));
+    }
+
+    formatEventAsString(evt) {
+        switch (evt.type) {
+            case SDRGame.gameevents.ROUND_OVER:
+                return 'round over';
+            case SDRGame.gameevents.PLAYER_HIT:
+                return `hit: ${evt.playerId}`;
+            case SDRGame.gameevents.PLAYER_ELIMINATED:
+                return `out: ${evt.playerId}`;
+            default:
+                return 'unknown event';
+        }
+    }
+
+    formatHPLabelString(playerName, hp) {
+        return `${playerName} HP: ${hp}`;
     }
 }
