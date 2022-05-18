@@ -55,7 +55,10 @@ class SceneActiveGame extends Phaser.Scene {
     }
 
     renderInitialGameState(arena) {
-        arena.walls.forEach(wall => this.add.rectangle(wall.x, wall.y, wall.w, wall.h, 0x000000));
+        arena.walls.forEach(wall => {
+            const wallGraphic = this.add.rectangle(wall.x, wall.y, wall.w, wall.h, 0x000000);
+            wallGraphic.setAngle(wall.angle);
+        });
 
         this.playersById = new Map();
 

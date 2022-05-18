@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "mkbundle": "browserify ./src/client/ClientBundleDefinition.js -o ./src/client/bundle.js",
-    "start": "http-server ./src/client -c-1 -a localhost -p 8080"
+    "start-client": "http-server ./src/client -c-1 -a localhost -p 8080",
+    "start-server": "node ./src/server/testserver.js"
   },
   "repository": {
     "type": "git",

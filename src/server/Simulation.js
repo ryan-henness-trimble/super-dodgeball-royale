@@ -391,7 +391,7 @@ function toWindowCoordinates(x, y) {
 
 function makeWall(x, y, w, h, angle) {
     let wall = Bodies.rectangle(x, y, w, h, {
-        angle: angle,
+        angle: toRadians(angle),
         isStatic: true
     });
 
@@ -427,6 +427,10 @@ function makeCircle(x, y, r) {
     circle.inertia = Infinity;
 
     return circle;
+}
+
+function toRadians(degrees) {
+    return degrees * Math.PI / 180;
 }
 
 exports.Simulation = Simulation;

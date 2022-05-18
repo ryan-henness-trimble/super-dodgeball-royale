@@ -1,44 +1,93 @@
 const { gameconstants } = require('../shared/gameconstants');
 
+// Angle should be specified in degrees
+// the rectangles that surround the entire player area are included automatically
 // list of rectangles: [x, y, w, h, angle] relative to 0,0 of natural bounds
 // ball spawn: x,y
 // player spawns: [x,y]
 
-const allMaps = [
+const mapData = [
     {
         name: 'basic',
-        walls: getBoundingRects(),
-        ballSpawn: makePoint(350, 350),
+        walls: [],
+        ballSpawn: [350, 350],
         playerSpawns: [
-            makePoint(200, 100),
-            makePoint(500, 600),
-            makePoint(100, 500),
-            makePoint(600, 200),
-
-            makePoint(500, 100),
-            makePoint(200, 600),
-            makePoint(100, 200),
-            makePoint(600, 500),
-
-            makePoint(350, 100),
-            makePoint(350, 600),
-            makePoint(100, 350),
-            makePoint(600, 350)
+            [200, 100],
+            [500, 600],
+            [100, 500],
+            [600, 200],
+            [500, 100],
+            [200, 600],
+            [100, 200],
+            [600, 500],
+            [350, 100],
+            [350, 600],
+            [100, 350],
+            [600, 350]
+        ]
+    },
+    {
+        name: 'map-demo',
+        walls: [
+            [0, 0, 50, 50, 45],
+            [700, 0, 50, 50, 45],
+            [0, 700, 50, 50, 45],
+            [700, 700, 50, 50, 45],
+            [350, 0, 50, 50, 45],
+            [350, 700, 50, 50, 45],
+            [0, 350, 50, 50, 45],
+            [700, 350, 50, 50, 45],
+            [350, 350, 100, 100, 45]
+        ],
+        ballSpawn: [200, 350],
+        playerSpawns: [
+            [200, 100],
+            [500, 600],
+            [100, 500],
+            [600, 200],
+            [500, 100],
+            [200, 600],
+            [100, 200],
+            [600, 500],
+            [350, 100],
+            [350, 600],
+            [100, 350],
+            [600, 350]
         ]
     }
-];
+]
 
 class MapProvider {
 
     constructor() {
         this.maps = new Map();
 
-        allMaps.forEach(m => this.maps.set(m.name, m));
+        mapData.map(m => convertMapDataToGameFormat(m))
+            .forEach(m => this.maps.set(m.name, m));
     }
 
     getMap(mapName) {
         return this.maps.get(mapName);
     }
+}
+
+function convertMapDataToGameFormat(mapData) {
+    const mapWalls = mapData.walls
+        .filter(w => w.length === 5)
+        .map(w => makeRectForWindow(...w));
+    const ballSpawn = mapData.ballSpawn.length === 2
+        ? makePoint(...mapData.ballSpawn)
+        : makePoint(0, 0);
+    const playerSpawns = mapData.playerSpawns
+        .filter(p => p.length === 2)
+        .map(p => makePoint(...p));
+    
+    return {
+        name: mapData.name,
+        walls: getBoundingRects().concat(mapWalls),
+        ballSpawn: ballSpawn,
+        playerSpawns: playerSpawns
+    };
 }
 
 function getBoundingRects() {

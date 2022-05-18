@@ -25,7 +25,8 @@ class GameTracker {
 
         const playerIds = players.map(p => p.playerId);
 
-        const mapName = 'basic';
+        // const mapName = 'basic';
+        const mapName = 'map-demo';
         const numPlayers = playerIds.length;
 
         const initialState = this.sim.reset(mapName, numPlayers);

@@ -4,7 +4,19 @@
 
 Team :lizard:LETS G:boom::boom::boom::exploding_head::boom::boom::boom:'s hackathon
 
+# Prerequisites
+
+run `npm install -g browserify`
+
 # Running Locally
-- Run `npm install`
-- Run `npm run start`
-- Navigate your browser to one of the addresses listed from the `start` command
+
+Run `npm install`
+
+Start the game server: `npm run start-server`
+
+Make the frontend javascript bundle: `npm run mkbundle`
+
+Start the frontend server: `npm run start-client`
+
+App is running on `http://localhost:8080`
+Server is running on `ws://localhost:8090`
