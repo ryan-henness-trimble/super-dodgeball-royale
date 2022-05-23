@@ -1,6 +1,7 @@
 const { v4 } = require('uuid');
 const uuid = v4;
 const { GameTracker } = require('./GameTracker');
+const { PlayerCustomizationManager } = require('./PlayerCustomizationManager');
 
 class LobbyMembership {
 
@@ -43,6 +44,13 @@ class LobbyMembership {
 
         lobby.addMember(playerId);
         this.playerIdToLobbyCode.set(playerId, lobbyCode);
+    }
+
+    updateLobbyByPlayer(lobbyMemberId, playerCustomization)
+    {
+        const lobby = this.getLobbyByPlayer(lobbyMemberId);
+        return lobby == null ? false :
+            lobby.updateMember(new LobbyMember(lobbyMemberId, playerCustomization));
     }
 
     removePlayerFromLobby(playerId, lobbyCode) {
@@ -100,14 +108,17 @@ class Lobby {
     constructor(hostId) {
         this.code = uuid();
         this.members = [];
+        this.playerCustomizationManager = new PlayerCustomizationManager();
         this.hostId = hostId;
         this.lastPlayerNumber = 1;
         this.game = new GameTracker();
     }
 
     addMember(playerId) {
-        const newMember = createLobbyMemberObject(playerId, `Player ${this.lastPlayerNumber}`, getRandomColor());
+        const validPlayerCustomization = this.playerCustomizationManager.generateValidPlayerCustomization(`Player ${this.lastPlayerNumber}`);
+        const newMember = new LobbyMember(playerId, validPlayerCustomization);
         this.members.push(newMember);
+        this.playerCustomizationManager.setPlayerCustomization(newMember);
         this.lastPlayerNumber += 1;
     }
 
@@ -118,6 +129,7 @@ class Lobby {
         }
 
         this.members.splice(idx, 1);
+        this.playerCustomizationManager.removePlayerCustomization(playerId);
 
         if (this.members.length === 0) {
             this.hostId = '';
@@ -126,6 +138,25 @@ class Lobby {
         }
 
         return true;
+    }
+
+    updateMember(lobbyMember)
+    {
+        const idx = this.members.findIndex(m => m.playerId === lobbyMember.playerId);
+        if (idx === -1) {
+            return false;
+        }
+
+        const updatedCustomization = this.playerCustomizationManager.setPlayerCustomization(lobbyMember);
+        if (!updatedCustomization)
+        {
+            return false;
+        }
+        else
+        {
+            this.members[idx] = lobbyMember;
+            return true;
+        }
     }
 
     isEmpty() {
@@ -148,7 +179,8 @@ class Lobby {
                 return {
                     id: m.playerId,
                     name: m.name,
-                    color: m.color
+                    playerColor: m.playerColor,
+                    shieldColor: m.shieldColor,
                 };
             })
         };
@@ -159,12 +191,14 @@ class Lobby {
     }
 }
 
-function createLobbyMemberObject(playerId, name, color) {
-    return {
-        playerId: playerId,
-        name: name,
-        color: color
-    };
+class LobbyMember {
+
+    constructor(playerId, playerCustomization) {
+        this.playerId = playerId;
+        this.name = playerCustomization.name;
+        this.playerColor = playerCustomization.playerColor; 
+        this.shieldColor = playerCustomization.shieldColor;
+    }
 }
 
 function getRandomColor() {

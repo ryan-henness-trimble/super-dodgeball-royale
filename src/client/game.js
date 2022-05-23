@@ -19,6 +19,9 @@ window.onload = function() {
         fps: {
           target: SDRGame.GameConstants.TARGET_FPS,
           forceSetTimeOut: true
+        },
+        dom: {
+            createContainer: true
         }
     };
 

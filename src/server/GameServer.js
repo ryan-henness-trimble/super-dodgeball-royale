@@ -93,11 +93,14 @@ class GameServer {
         const playerId = socket.id;
         switch (msg.type) {
             case Messaging.LobbyCommands.ACK_JOIN:
-                const lobby = this.lobbies.getLobbyStateByPlayer(playerId);
-                const msg = Messaging.LobbyUpdates.createNewState(lobby);
-                this.broadcastLobbyUpdate(lobby.code, msg);
+                let lobby = this.lobbies.getLobbyStateByPlayer(playerId);
+                const newLobbyState = Messaging.LobbyUpdates.createNewState(lobby);
+                this.broadcastLobbyUpdate(lobby.code, newLobbyState);
                 break;
-            case Messaging.LobbyCommands.LEAVE_LOBBY:
+            case Messaging.LobbyCommands.LEAVE_LOBBY:                
+                break;
+            case Messaging.LobbyCommands.UPDATE_LOBBY_MEMBER:
+                this.handleUpdateLobbyMember(playerId, msg.updatedPlayerCustomization);
                 break;
             case Messaging.LobbyCommands.START_GAME:
                 this.handleStartGameCommand(playerId);
@@ -111,6 +114,17 @@ class GameServer {
             case Messaging.GameCommands.CLIENT_READY:
                 this.handlePlayerReadyCommand(playerId);
                 break;
+        }
+    }
+
+    handleUpdateLobbyMember(playerId, playerCustomization)
+    {
+        const updateApplied = this.lobbies.updateLobbyByPlayer(playerId, playerCustomization);
+        if (updateApplied)
+        {
+            let updatedLobby = this.lobbies.getLobbyStateByPlayer(playerId);
+            const updatedLobbyState = Messaging.LobbyUpdates.createNewState(updatedLobby);
+            this.broadcastLobbyUpdate(updatedLobby.code, updatedLobbyState);
         }
     }
 
