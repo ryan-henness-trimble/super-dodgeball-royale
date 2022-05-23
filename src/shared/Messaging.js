@@ -58,10 +58,14 @@ const LobbyUpdates = {
 const LobbyCommands = {
     ACK_JOIN: 'ack-join',
     LEAVE_LOBBY: 'leave-lobby',
+    UPDATE_LOBBY_MEMBER: 'update-lobby-member',
     START_GAME: 'start-game',
 
     createAckJoin: () => createMessage(LobbyCommands.ACK_JOIN),
     createLeaveLobby: () => createMessage(LobbyCommands.LEAVE_LOBBY),
+    createUpdateLobbyMember: (playerCustomization) => createMessage(LobbyCommands.UPDATE_LOBBY_MEMBER, {
+        updatedPlayerCustomization: playerCustomization
+    }),
     createStartGame: () => createMessage(LobbyCommands.START_GAME)
 };
 

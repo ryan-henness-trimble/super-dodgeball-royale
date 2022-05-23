@@ -93,11 +93,14 @@ class GameServer {
         const playerId = socket.id;
         switch (msg.type) {
             case Messaging.LobbyCommands.ACK_JOIN:
-                const lobby = this.lobbies.getLobbyStateByPlayer(playerId);
-                const msg = Messaging.LobbyUpdates.createNewState(lobby);
-                this.broadcastLobbyUpdate(lobby.code, msg);
+                let lobby = this.lobbies.getLobbyStateByPlayer(playerId);
+                const newLobbyState = Messaging.LobbyUpdates.createNewState(lobby);
+                this.broadcastLobbyUpdate(lobby.code, newLobbyState);
                 break;
-            case Messaging.LobbyCommands.LEAVE_LOBBY:
+            case Messaging.LobbyCommands.LEAVE_LOBBY:                
+                break;
+            case Messaging.LobbyCommands.UPDATE_LOBBY_MEMBER:
+                this.handleUpdateLobbyMember(playerId, msg.updatedPlayerCustomization);
                 break;
             case Messaging.LobbyCommands.START_GAME:
                 this.handleStartGameCommand(playerId);
@@ -114,6 +117,19 @@ class GameServer {
         }
     }
 
+    handleUpdateLobbyMember(playerId, playerCustomization)
+    {
+        const updateApplied = this.lobbies.updateLobbyByPlayer(playerId, playerCustomization);
+        if (updateApplied)
+        {
+            let updatedLobby = this.lobbies.getLobbyStateByPlayer(playerId);
+            console.log(`updated lobby`)
+            console.log(updatedLobby)
+            const updatedLobbyState = Messaging.LobbyUpdates.createNewState(updatedLobby);
+            this.broadcastLobbyUpdate(updatedLobby.code, updatedLobbyState);
+        }
+    }
+
     handleStartGameCommand(playerId) {
         if (!this.lobbies.playerIsInALobby(playerId)) {
             return;
@@ -124,6 +140,8 @@ class GameServer {
         const initialState = lobby.setUpNewGame();
 
         const msg = Messaging.LobbyUpdates.createGameStarting(initialState.walls, initialState.players);
+        console.log(`initialState`)
+        console.log(initialState.players)
         this.broadcastLobbyUpdate(lobby.code, msg);
 
         // need:
