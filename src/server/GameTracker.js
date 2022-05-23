@@ -41,8 +41,11 @@ class GameTracker {
             this.playerIdsToGameIds.set(playerIds[i], p.id)
 
             p.name = players[i].name;
-            p.color = players[i].color;
+            p.playerColor = players[i].playerColor;
+            p.shieldColor = players[i].shieldColor;
         });
+        console.log(`in intiial state`)
+        console.log(initialState)
 
         return initialState;
     }
