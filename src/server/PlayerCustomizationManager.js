@@ -28,7 +28,6 @@ class PlayerCustomizationManager {
 
     setPlayerCustomization(lobbyMemberObject)
     {
-        console.log(`attempting to set player customization for player id ${lobbyMemberObject.playerId}`)
         if (this.isCustomizationValid(lobbyMemberObject))
         {
             this.playerCustomizations.set(lobbyMemberObject.playerId, new PlayerCustomization(lobbyMemberObject));
