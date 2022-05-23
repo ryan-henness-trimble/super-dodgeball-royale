@@ -28,10 +28,9 @@ class PlayerCustomizationManager {
 
     setPlayerCustomization(lobbyMemberObject)
     {
-        console.log(`setting player customization: ${lobbyMemberObject.playerId}`)
+        console.log(`attempting to set player customization for player id ${lobbyMemberObject.playerId}`)
         if (this.isCustomizationValid(lobbyMemberObject))
         {
-            console.log("setting player customization");
             this.playerCustomizations.set(lobbyMemberObject.playerId, new PlayerCustomization(lobbyMemberObject));
             this.replaceExistingMapping.call(this, this.playerNames, lobbyMemberObject.name, lobbyMemberObject.playerId, false);
             this.replaceExistingMapping.call(this, this.playerColors, lobbyMemberObject.playerColor, lobbyMemberObject.playerId, true);
@@ -64,7 +63,6 @@ class PlayerCustomizationManager {
         const colors = [...colorMapping.entries()];
         const availableColors = colors.filter(colors => colors[1] === null);             // Each element is an array of [color, playerIdUsing]
         const na = colors.filter(colors => colors[1] !== null);
-        console.log(`color counts: ${availableColors.length} - ${na.length}`)
         return availableColors[Math.floor(Math.random()*availableColors.length)][0];    // For a random avaible color, take the key (color) 
     }
 

@@ -178,21 +178,15 @@ class SceneLobby extends Phaser.Scene {
     }
 
     updatePlayerName(lobbyState, event) {
-        console.log(`updateing`)
-        console.log(lobbyState)
-        console.log(event)
         if (event.target.name === 'changeNameButton')
         {
             let playerName = this.getPlayerNameText();
-            console.log(playerName)
             let currentPlayerState = lobbyState.members.find(m => m.id === this.network.playerId);
             if (currentPlayerState && playerName)
             {
                 currentPlayerState.name = playerName;
                 const updateLobbyMemberCommand = SDRGame.Messaging.LobbyCommands.createUpdateLobbyMember(currentPlayerState);
-                console.log(`before: ${playerName}`)
                 this.network.sendLobbyCommand(updateLobbyMemberCommand);
-                console.log(`after: ${this.getPlayerNameText()}`)
             }
         }
     }

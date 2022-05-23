@@ -123,8 +123,6 @@ class GameServer {
         if (updateApplied)
         {
             let updatedLobby = this.lobbies.getLobbyStateByPlayer(playerId);
-            console.log(`updated lobby`)
-            console.log(updatedLobby)
             const updatedLobbyState = Messaging.LobbyUpdates.createNewState(updatedLobby);
             this.broadcastLobbyUpdate(updatedLobby.code, updatedLobbyState);
         }
@@ -140,8 +138,6 @@ class GameServer {
         const initialState = lobby.setUpNewGame();
 
         const msg = Messaging.LobbyUpdates.createGameStarting(initialState.walls, initialState.players);
-        console.log(`initialState`)
-        console.log(initialState.players)
         this.broadcastLobbyUpdate(lobby.code, msg);
 
         // need:

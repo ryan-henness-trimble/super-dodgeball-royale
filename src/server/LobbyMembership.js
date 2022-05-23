@@ -143,13 +143,11 @@ class Lobby {
     updateMember(lobbyMember)
     {
         const idx = this.members.findIndex(m => m.playerId === lobbyMember.playerId);
-        console.log(`updatingMember: ${idx}`)
         if (idx === -1) {
             return false;
         }
 
         const updatedCustomization = this.playerCustomizationManager.setPlayerCustomization(lobbyMember);
-        console.log(updatedCustomization)
         if (!updatedCustomization)
         {
             return false;

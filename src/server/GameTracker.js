@@ -44,8 +44,6 @@ class GameTracker {
             p.playerColor = players[i].playerColor;
             p.shieldColor = players[i].shieldColor;
         });
-        console.log(`in intiial state`)
-        console.log(initialState)
 
         return initialState;
     }
