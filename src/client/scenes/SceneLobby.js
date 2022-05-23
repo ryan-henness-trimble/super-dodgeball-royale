@@ -135,8 +135,6 @@ class SceneLobby extends Phaser.Scene {
                     }
                     else
                     {
-                        /*const indicator = this.add.circle(columnIndex * padding, rowIndex * padding, this.GameConstants.PLAYER_HITBOX_RADIUS*1.1, 0xffffff);
-                        colorOptions.push(indicator);*/
                         colorCircle.setStrokeStyle(0.1, 0xffffff)
                         colorCircle.strokeColor = 0xffffff;
                         colorCircle.lineWidth = 0.1 * this.GameConstants.PLAYER_HITBOX_RADIUS;
