@@ -62,7 +62,7 @@ class SceneLobby extends Phaser.Scene {
         this.playerGraphicsList.forEach(p => p.destroy());
         this.playerGraphicsList = [];
         lobbyState.members.forEach((m, i) => {
-            const playerShield = this.add.rectangle(40, -15, 25, 30, m.shieldColor);
+            const playerShield = this.add.rectangle(40, -15, this.GameConstants.PLAYER_HITBOX_RADIUS*1.8, 25, m.shieldColor);
             const playerBall = this.add.circle(40, 0, this.GameConstants.PLAYER_HITBOX_RADIUS, m.playerColor);
 
             const name = m.id === this.network.playerId
@@ -70,7 +70,7 @@ class SceneLobby extends Phaser.Scene {
                 : m.name;
             const playerLabel = this.add.text(80, -10, name);
 
-            const playerObjects = [playerBall, playerLabel];
+            const playerObjects = [playerShield, playerBall, playerLabel];
 
             if (m.id === lobbyState.host) {
                 const hostIndicator = this.add.rectangle(0, 0, 10, 10, 0xe8d210);
@@ -82,7 +82,8 @@ class SceneLobby extends Phaser.Scene {
             this.playerGraphicsList.push(container);
         });
         
-        this.createPlayerColorPicker(lobbyState);
+        this.createColorPicker(lobbyState, "Select Player Color:", "playerColor", 600, 300);
+        this.createColorPicker(lobbyState, "Select Shield Color:", "shieldColor", 600, 450);
 
         if (this.network.playerId === lobbyState.host) {
             this.showStartButton();
@@ -91,10 +92,17 @@ class SceneLobby extends Phaser.Scene {
         }
     }
 
-    // Create color picker options
-    createPlayerColorPicker(lobbyState)
+    /**
+     * Create color picker options
+     * @param {Lobby} lobbyState                Lobby object with informatio 
+     * @param {string} pickerTitle              Title to be displayed above color picker
+     * @param {string} playerPropertyToUpdate   Property of player updated by color options - should be 'playerColor' or 'shieldColor' 
+     * @param {int} containerX                  X coordinate of where picker's containter is placed
+     * @param {int} containerY                  Y coordinate of where picker's containter is placed
+     */
+    createColorPicker(lobbyState, pickerTitle, playerPropertyToUpdate, containerX, containerY)
     {
-        const colorOptions = [];
+        const pickerObjects = [];
         let currentPlayerState = lobbyState.members.find(m => m.id === this.network.playerId);
         this.GameConstants.COLOR_PICKER_CONSTANTS.DEFAULT_COLOR_OPTIONS.forEach((color, idx) => {
             if (idx < this.GameConstants.COLOR_PICKER_CONSTANTS.COLORS_AVAILABLE)
@@ -102,14 +110,14 @@ class SceneLobby extends Phaser.Scene {
                 const padding = 2*this.GameConstants.PLAYER_HITBOX_RADIUS + 10;
                 const columnIndex = idx % this.GameConstants.COLOR_PICKER_CONSTANTS.COLORS_PER_ROW;
                 const rowIndex = Math.floor(idx / this.GameConstants.COLOR_PICKER_CONSTANTS.COLORS_PER_ROW);
-                let memberUsingColor = lobbyState.members.find(m => m.playerColor === color);
+                let memberUsingColor = lobbyState.members.find(m => m[playerPropertyToUpdate] === color);
 
-                let colorCircle = this.add.circle(columnIndex * padding, rowIndex * padding, this.GameConstants.PLAYER_HITBOX_RADIUS, color)
+                let colorCircle = this.add.circle(columnIndex * padding, 50 + rowIndex * (padding), this.GameConstants.PLAYER_HITBOX_RADIUS, color)
                     .setInteractive()
                     .on('pointerdown', () => {
                         if (!memberUsingColor)
                         {
-                            currentPlayerState.playerColor = color;
+                            currentPlayerState[playerPropertyToUpdate] = color;
                             const updateLobbyMemberCommand = SDRGame.Messaging.LobbyCommands.createUpdateLobbyMember(currentPlayerState);
                             this.network.sendLobbyCommand(updateLobbyMemberCommand);
                         }
@@ -130,11 +138,13 @@ class SceneLobby extends Phaser.Scene {
                         colorCircle.lineWidth = 0.1 * this.GameConstants.PLAYER_HITBOX_RADIUS;
                     }
                 }
-                colorOptions.push(colorCircle);
+                pickerObjects.push(colorCircle);
             }
         });
 
-        const playerColorContainer = this.add.container(600, 100, colorOptions);
+        const title = this.add.text(0, 0, pickerTitle);
+        pickerObjects.push(title);
+        const playerColorContainer = this.add.container(containerX, containerY, pickerObjects);
         this.playerGraphicsList.push(playerColorContainer);
     }
 
