@@ -4,6 +4,7 @@ class SceneLobby extends Phaser.Scene {
         super('lobby');
 
         this.GameConstants = SDRGame.GameConstants;
+        this.playerGraphicsList = [];
     }
 
     preload() { }
@@ -52,7 +53,7 @@ class SceneLobby extends Phaser.Scene {
     receiveNewState(lobbyState) {
         // code
         // host
-        // members [{ id, name, color }]
+        // members [{ id, name, playerColor, shieldColor }]
 
         const codeStr = `Code: ${lobbyState.code}`;
         this.codeLabel.setText(codeStr);
@@ -61,7 +62,8 @@ class SceneLobby extends Phaser.Scene {
         this.playerGraphicsList.forEach(p => p.destroy());
         this.playerGraphicsList = [];
         lobbyState.members.forEach((m, i) => {
-            const playerBall = this.add.circle(40, 0, this.GameConstants.PLAYER_HITBOX_RADIUS, m.color);
+            const playerShield = this.add.rectangle(40, -15, 25, 30, m.shieldColor);
+            const playerBall = this.add.circle(40, 0, this.GameConstants.PLAYER_HITBOX_RADIUS, m.playerColor);
 
             const name = m.id === this.network.playerId
                 ? `${m.name} (you)`
@@ -79,12 +81,61 @@ class SceneLobby extends Phaser.Scene {
 
             this.playerGraphicsList.push(container);
         });
+        
+        this.createPlayerColorPicker(lobbyState);
 
         if (this.network.playerId === lobbyState.host) {
             this.showStartButton();
         } else {
             this.hideStartButton();
         }
+    }
+
+    // Create color picker options
+    createPlayerColorPicker(lobbyState)
+    {
+        const colorOptions = [];
+        let currentPlayerState = lobbyState.members.find(m => m.id === this.network.playerId);
+        this.GameConstants.COLOR_PICKER_CONSTANTS.DEFAULT_COLOR_OPTIONS.forEach((color, idx) => {
+            if (idx < this.GameConstants.COLOR_PICKER_CONSTANTS.COLORS_AVAILABLE)
+            {
+                const padding = 2*this.GameConstants.PLAYER_HITBOX_RADIUS + 10;
+                const columnIndex = idx % this.GameConstants.COLOR_PICKER_CONSTANTS.COLORS_PER_ROW;
+                const rowIndex = Math.floor(idx / this.GameConstants.COLOR_PICKER_CONSTANTS.COLORS_PER_ROW);
+                let memberUsingColor = lobbyState.members.find(m => m.playerColor === color);
+
+                let colorCircle = this.add.circle(columnIndex * padding, rowIndex * padding, this.GameConstants.PLAYER_HITBOX_RADIUS, color)
+                    .setInteractive()
+                    .on('pointerdown', () => {
+                        if (!memberUsingColor)
+                        {
+                            currentPlayerState.playerColor = color;
+                            const updateLobbyMemberCommand = SDRGame.Messaging.LobbyCommands.createUpdateLobbyMember(currentPlayerState);
+                            this.network.sendLobbyCommand(updateLobbyMemberCommand);
+                        }
+                    });
+
+                if (memberUsingColor)
+                {
+                    if (memberUsingColor.id !== currentPlayerState.id) 
+                    {
+                        colorCircle.setAlpha(0.01);
+                    }
+                    else
+                    {
+                        /*const indicator = this.add.circle(columnIndex * padding, rowIndex * padding, this.GameConstants.PLAYER_HITBOX_RADIUS*1.1, 0xffffff);
+                        colorOptions.push(indicator);*/
+                        colorCircle.setStrokeStyle(0.1, 0xffffff)
+                        colorCircle.strokeColor = 0xffffff;
+                        colorCircle.lineWidth = 0.1 * this.GameConstants.PLAYER_HITBOX_RADIUS;
+                    }
+                }
+                colorOptions.push(colorCircle);
+            }
+        });
+
+        const playerColorContainer = this.add.container(600, 100, colorOptions);
+        this.playerGraphicsList.push(playerColorContainer);
     }
 
     createStartButton() {

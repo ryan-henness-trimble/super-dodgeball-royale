@@ -63,8 +63,8 @@ class SceneActiveGame extends Phaser.Scene {
         this.playersById = new Map();
 
         arena.players.forEach((p, i) => {
-            const shield = this.add.rectangle(0, -15, 25, 30, 0x48B0FF);
-            const body = this.add.circle(0, 0, p.r, p.color);
+            const shield = this.add.rectangle(0, -15, 25, 30, p.shieldColor);
+            const body = this.add.circle(0, 0, p.r, p.playerColor);
             const label = this.add.text(0, 0, p.name, { fill: '#ffffff' });
 
             const playerGraphic = this.add.container(p.x, p.y, [shield, body, label]);
@@ -72,7 +72,7 @@ class SceneActiveGame extends Phaser.Scene {
             const player = {
                 id: p.id,
                 name: p.name,
-                color: p.color,
+                playerColor: p.playerColor,
                 graphic: playerGraphic,
                 hitboxGraphic: body,
                 hpLabel: this.add.text(20, 100 + i*30, this.formatHPLabelString(p.name, p.hp))
@@ -111,7 +111,7 @@ class SceneActiveGame extends Phaser.Scene {
             } else if (p.hasIFrames) {
                 player.hitboxGraphic.setFillStyle(0xbb0000);
             } else {
-                player.hitboxGraphic.setFillStyle(player.color);
+                player.hitboxGraphic.setFillStyle(player.playerColor);
             }
         });
 
