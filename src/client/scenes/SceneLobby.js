@@ -7,7 +7,10 @@ class SceneLobby extends Phaser.Scene {
         this.playerGraphicsList = [];
     }
 
-    preload() { }
+    preload ()
+    {
+        this.load.html('playerInputForm', '../htmlAssets/playerNameInput.html');
+    }
 
     create({ network, code }) {
         this.network = network;
@@ -82,6 +85,7 @@ class SceneLobby extends Phaser.Scene {
             this.playerGraphicsList.push(container);
         });
         
+        this.createPlayerNameInput(lobbyState, 600, 200);
         this.createColorPicker(lobbyState, "Select Player Color:", "playerColor", 600, 300);
         this.createColorPicker(lobbyState, "Select Shield Color:", "shieldColor", 600, 450);
 
@@ -146,6 +150,51 @@ class SceneLobby extends Phaser.Scene {
         pickerObjects.push(title);
         const playerColorContainer = this.add.container(containerX, containerY, pickerObjects);
         this.playerGraphicsList.push(playerColorContainer);
+    }
+
+    createPlayerNameInput(lobbyState, containerX, containerY)
+    {
+        let nameInputForm = this.add.dom(0, 0).createFromCache('playerInputForm');
+        nameInputForm.originX = 0;
+        nameInputForm.addListener('click');
+        nameInputForm.on('click', this.updatePlayerName.bind(this, lobbyState));
+        this.playerNameInput = nameInputForm;
+
+        const nameFormContainer = this.add.container(containerX, containerY, nameInputForm);
+        this.playerGraphicsList.push(nameFormContainer);
+    }
+
+    getPlayerNameText()
+    {
+        if (!this.playerNameInput)
+        {
+            return null;
+        }
+        else
+        {
+            let nameInput = this.playerNameInput.getChildByName('playerName');
+            return nameInput.value;
+        }
+    }
+
+    updatePlayerName(lobbyState, event) {
+        console.log(`updateing`)
+        console.log(lobbyState)
+        console.log(event)
+        if (event.target.name === 'changeNameButton')
+        {
+            let playerName = this.getPlayerNameText();
+            console.log(playerName)
+            let currentPlayerState = lobbyState.members.find(m => m.id === this.network.playerId);
+            if (currentPlayerState && playerName)
+            {
+                currentPlayerState.name = playerName;
+                const updateLobbyMemberCommand = SDRGame.Messaging.LobbyCommands.createUpdateLobbyMember(currentPlayerState);
+                console.log(`before: ${playerName}`)
+                this.network.sendLobbyCommand(updateLobbyMemberCommand);
+                console.log(`after: ${this.getPlayerNameText()}`)
+            }
+        }
     }
 
     createStartButton() {
