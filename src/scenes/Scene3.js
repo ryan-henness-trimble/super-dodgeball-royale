@@ -9,7 +9,7 @@ class Scene3 extends Phaser.Scene {
     }
 
     create() {
-        this.socket = io("ws://localhost:8090");
+        this.socket = io(process.env.WS_HOST | "ws://localhost:8090");
 
         this.socket.on('connection ack', (value) => {
             console.log(value);
@@ -30,7 +30,7 @@ class Scene3 extends Phaser.Scene {
         const angles = [(-Math.PI), (-Math.PI / 2), 0, (Math.PI / 2)]
         const dist = 100;
         this.add.circle(ox, oy, 5, 0x00ff00);
-        
+
         for (let a of angles)
         {
             const dx = dist * Math.cos(a);

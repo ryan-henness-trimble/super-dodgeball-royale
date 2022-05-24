@@ -1,7 +1,7 @@
 <html>
     <head>
         <script type="text/javascript" src="cb.js"></script>
-        
+
     </head>
     <body>
         <button id="create">Create Lobby</button>
@@ -17,7 +17,7 @@
                 d.textContent = JSON.stringify(ls, null, 2);
             }
 
-            const myClient = new GameClient("ws://localhost:8090",
+            const myClient = new GameClient("https://super-dodgeball-royale-server.herokuapp.com/",
                 onLobbyUpdate,
                 () => {},
                 () => {}

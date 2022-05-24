@@ -17,11 +17,11 @@ class GameSetup extends Phaser.Scene {
     }
 
     create() {
-        this.socket = io("ws://localhost:8090");
+        this.socket = io(process.env.WS_HOST | "ws://localhost:8090");
 
         this.socket.on('setup', (p) => {
             console.log('received setup');
-            
+
             this.playerInfo = {
                 id: p.player.id,
                 x: p.player.xPos,
