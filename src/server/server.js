@@ -1,7 +1,7 @@
 const { Server } = require('socket.io');
 const Matter = require('matter-js');
 
-const SERVER_PORT = 8090;
+const SERVER_PORT = process.env.PORT | 8090;
 const GAME_LOOP_MS = 1000 / 60;
 
 const SIMULATED_LAG_MS = 200;
@@ -147,7 +147,7 @@ function updateVelocity(body, nextVelocity) {
 
 const io = new Server({
     cors: {
-        origin: ['http://localhost:8080']
+        origin: ['http://localhost:8080', 'https://super-dodgeball-royale.herokuapp.com']
     }
 });
 
@@ -157,7 +157,7 @@ io.on('connection', (socket) => {
     console.log('client connected');
 
     currentGame = new MultiplayerGame(socket);
-    
+
     currentGame.setup();
 
     socket.on('disconnect', () => {
