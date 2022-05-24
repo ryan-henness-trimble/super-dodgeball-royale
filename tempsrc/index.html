@@ -17,7 +17,7 @@
                 d.textContent = JSON.stringify(ls, null, 2);
             }
 
-            const myClient = new GameClient("https://super-dodgeball-royale-server.herokuapp.com",
+            const myClient = new GameClient('ws://localhost:8090',
                 onLobbyUpdate,
                 () => {},
                 () => {}
