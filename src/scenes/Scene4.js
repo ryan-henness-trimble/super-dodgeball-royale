@@ -17,7 +17,7 @@ class GameSetup extends Phaser.Scene {
     }
 
     create() {
-        this.socket = io(process.env.WS_HOST || "https://super-dodgeball-royale-server.herokuapp.com/");
+        this.socket = io("https://super-dodgeball-royale-server.herokuapp.com/");
 
         this.socket.on('setup', (p) => {
             console.log('received setup');
