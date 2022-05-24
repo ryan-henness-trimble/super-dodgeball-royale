@@ -9,7 +9,7 @@ class Scene3 extends Phaser.Scene {
     }
 
     create() {
-        this.socket = io(process.env.WS_HOST | "ws://localhost:8090");
+        this.socket = io(process.env.WS_HOST || "ws://localhost:8090");
 
         this.socket.on('connection ack', (value) => {
             console.log(value);
