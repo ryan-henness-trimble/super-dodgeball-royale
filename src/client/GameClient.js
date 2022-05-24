@@ -6,9 +6,7 @@ const { lobbycommands } = require('../shared/lobbycommands');
 class GameClient {
 
     constructor(serverUrl) {
-        this.socket = io(serverUrl, {
-            transports: ["websocket", "polling"]
-        });
+        this.socket = io(serverUrl);
     }
 
     get playerId() {
