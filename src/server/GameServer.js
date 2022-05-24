@@ -17,7 +17,8 @@ class GameServer {
     startListening() {
         this.io = new Server({
             cors: {
-                origin: this.corsOrigins
+                origin: this.corsOrigins,
+                methods: ["GET", "POST"]
             }
         });
 
@@ -97,7 +98,7 @@ class GameServer {
                 const newLobbyState = Messaging.LobbyUpdates.createNewState(lobby);
                 this.broadcastLobbyUpdate(lobby.code, newLobbyState);
                 break;
-            case Messaging.LobbyCommands.LEAVE_LOBBY:                
+            case Messaging.LobbyCommands.LEAVE_LOBBY:
                 break;
             case Messaging.LobbyCommands.UPDATE_LOBBY_MEMBER:
                 this.handleUpdateLobbyMember(playerId, msg.updatedPlayerCustomization);
