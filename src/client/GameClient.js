@@ -8,10 +8,12 @@ class GameClient {
     constructor(serverUrl) {
         this.socket = io(serverUrl, {
               cors: {
-                transports: ["websocket", "polling"],
-                withCredentials: true,
                 origin: "*",
                 methods: ["GET", "POST"]
+              },
+              transports: ["websocket", "polling"],
+              extraHeaders: {
+                "Access-Control-Allow-Origin": "*"
               }
         });
     }
