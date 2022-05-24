@@ -4,7 +4,7 @@ class SceneMain extends Phaser.Scene {
         super('main');
 
         // TODO pull this from appsettings
-        this.SERVER_URL = 'ws://localhost:8090';
+        this.SERVER_URL = 'https://super-dodgeball-royale.herokuapp.com';
     }
 
     preload() { }
