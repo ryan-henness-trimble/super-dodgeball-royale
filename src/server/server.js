@@ -147,7 +147,8 @@ function updateVelocity(body, nextVelocity) {
 
 const io = new Server({
     cors: {
-        origin: ['http://localhost:8080', 'https://super-dodgeball-royale.herokuapp.com']
+        origin: ['http://localhost:8080', 'https://super-dodgeball-royale.herokuapp.com'],
+        methods: ["GET", "POST"]
     }
 });
 
