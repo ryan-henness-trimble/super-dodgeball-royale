@@ -1,1 +1,1 @@
-worker: npm run startup-server
+web: npm run startup-server
