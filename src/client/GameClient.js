@@ -10,7 +10,7 @@ class GameClient {
               cors: {
                 transports: ["websocket", "polling"],
                 withCredentials: true,
-                origin: "http://localhost:8080",
+                origin: "*",
                 methods: ["GET", "POST"]
               }
         });
