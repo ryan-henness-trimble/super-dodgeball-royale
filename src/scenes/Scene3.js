@@ -9,7 +9,7 @@ class Scene3 extends Phaser.Scene {
     }
 
     create() {
-        this.socket = io("https://super-dodgeball-royale-server.herokuapp.com/");
+        this.socket = io("https://super-dodgeball-royale-server.herokuapp.com");
 
         this.socket.on('connection ack', (value) => {
             console.log(value);
