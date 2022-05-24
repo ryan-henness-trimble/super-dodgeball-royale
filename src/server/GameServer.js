@@ -17,7 +17,7 @@ class GameServer {
     startListening() {
         this.io = new Server({
             cors: {
-                origin: this.corsOrigins,
+                origin: '*',
                 methods: ["GET", "POST"]
             }
         });
