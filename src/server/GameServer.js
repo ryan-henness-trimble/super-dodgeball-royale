@@ -34,12 +34,12 @@ class GameServer {
             cback(this.lobbies.getDebugInfo());
         });
 
-        socket.on(Messaging.Channels.CREATE_LOBBY, () => {
+        socket.on(Messaging.Channels.CREATE_LOBBY, (callback) => {
             console.log('create lobby requested');
 
             const lobbyCode = this.lobbies.createLobby(socket.id);
 
-            socket.emit(Messaging.Channels.LOBBY_CREATED, {
+            callback({
                 success: true,
                 lobbyCode: lobbyCode
             });
@@ -115,6 +115,8 @@ class GameServer {
             case Messaging.GameCommands.CLIENT_READY:
                 this.handlePlayerReadyCommand(playerId);
                 break;
+            case Messaging.GameCommands.ACK_GAME_OVER:
+                break;
         }
     }
 
@@ -140,9 +142,12 @@ class GameServer {
 
         const msg = Messaging.LobbyUpdates.createGameStarting(initialState.walls, initialState.players);
         this.broadcastLobbyUpdate(lobby.code, msg);
+    }
 
-        // need:
-        // register listeners for each player's commands
+    handleAckGameOver(playerId) {
+        if (!this.lobbies.playerIsInALobby(playerId)) {
+            return;
+        }
     }
 
     handlePlayerReadyCommand(playerId) {
@@ -156,11 +161,16 @@ class GameServer {
 
         if (lobby.game.allPlayersReady()) {
             console.log('starting loop');
-            const deliveryCallback = (renderState) => {
+
+            const gameStateDelivery = (renderState) => {
                 this.broadcastSimUpdate(lobby.code, renderState);
             };
+            const gameOverCallback= (scoreboardOrder) => {
+                const gameOverMessage = Messaging.GameUpdates.createGameOver(lobby.hostId, scoreboardOrder);
+                this.broadcastGameUpdate(lobby.code, gameOverMessage);
+            };
 
-            lobby.game.startGameLoop(deliveryCallback);
+            lobby.game.startGameLoop(gameStateDelivery, gameOverCallback);
         }
     }
 

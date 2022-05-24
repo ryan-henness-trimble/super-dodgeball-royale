@@ -1,7 +1,6 @@
 const { io } = require('socket.io-client');
 const { Messaging } = require('../shared/Messaging');
 const { channels } = require('../shared/channels');
-const { lobbycommands } = require('../shared/lobbycommands');
 
 class GameClient {
 

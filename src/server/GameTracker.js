@@ -14,6 +14,7 @@ class GameTracker {
         this.gameLoop = null;
 
         this.renderStateCallback = () => {};
+        this.gameOverCallback = () => {};
 
         this.TIMESTEP_MS = 1000 / gameconstants.TARGET_FPS;
     }
@@ -56,15 +57,17 @@ class GameTracker {
         return this.readyPlayers.length === this.playerIdsToGameIds.size;
     }
 
-    startGameLoop(renderStateCallback) {
+    startGameLoop(renderStateCallback, onGameOver) {
         this.stopGameLoop();
         this.renderStateCallback = renderStateCallback;
+        this.gameOverCallback = onGameOver;
         this.gameLoop = setInterval(this.executeGameStep.bind(this), this.TIMESTEP_MS);
     }
 
     stopGameLoop() {
         if (this.gameLoop) {
             this.renderStateCallback = () => {};
+            this.gameOverCallback = () => {};
             clearInterval(this.gameLoop);
         }
     }
@@ -78,6 +81,11 @@ class GameTracker {
         this.sim.step(commands, this.TIMESTEP_MS);
 
         this.renderStateCallback(this.sim.getState());
+
+        if (this.sim.gameIsOver()) {
+            this.gameOverCallback(this.sim.getPlayerScoreboardOrder());
+            this.stopGameLoop();
+        }
     }
 
     receiveCommand(playerId, command) {

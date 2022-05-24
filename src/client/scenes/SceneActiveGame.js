@@ -7,9 +7,6 @@ class SceneActiveGame extends Phaser.Scene {
     preload() { }
 
     create({ network, initialState }) {
-        console.log('creating active game');
-        console.log(initialState);
-
         this.network = network;
 
         this.add.text(20, 20, 'Active Game');
@@ -20,9 +17,29 @@ class SceneActiveGame extends Phaser.Scene {
 
         this.lastSimUpdate = null;
 
-        this.network.subscribeToActiveGame(() => {}, (newState) => {
-            this.lastSimUpdate = newState;
-        });
+        const gameOverHandler = (gameOverMessage) => {
+            console.log(gameOverMessage);
+            // const scoreboard = gameOverMessage.scoreboard.map(playerId => {
+            //     const player = this.playersById.get(playerId);
+
+            //     return {
+            //         name: player.name,
+            //         color: player.color
+            //     };
+            // });
+
+            // this.scene.start('scoreboard', {
+            //     network: this.network,
+            //     hostId: gameOverMessage.hostId,
+            //     scoreboard
+            // });
+        }
+
+        this.network.subscribeToActiveGame(
+            gameOverHandler,
+            (newState) => {
+                this.lastSimUpdate = newState;
+            });
 
         this.updateFn = this.waitForSimUpdates.bind(this);
 

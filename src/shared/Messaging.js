@@ -71,14 +71,20 @@ const LobbyCommands = {
 
 const GameCommands = {
     CLIENT_READY: 'client-ready',
+    ACK_GAME_OVER: 'ack-game-over',
 
-    createClientReady: () => createMessage(GameCommands.CLIENT_READY)
+    createClientReady: () => createMessage(GameCommands.CLIENT_READY),
+    createAckGameOver: () => createMessage(GameCommands.ACK_GAME_OVER)
 }
 
 const GameUpdates = {
-    SENDING_SIM_UPDATES: 'sending-sim-updates',
+    GAME_OVER: 'game-over',
 
-    createSendingSimUpdates: () => createMessage(GameUpdates.SENDING_SIM_UPDATES)
+    // playerScoreOrder: [ playerGameId ] in order of last eliminated to first eliminated
+    createGameOver: (hostId, playerScoreOrder) => createMessage(GameUpdates.GAME_OVER, {
+        hostId: hostId,
+        scoreboard: playerScoreOrder
+    })
 }
 
 const SimCommands = {

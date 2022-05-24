@@ -112,6 +112,9 @@ class Lobby {
         this.hostId = hostId;
         this.lastPlayerNumber = 1;
         this.game = new GameTracker();
+
+        this.waitingToStartGame = new AcknowledgementTracker();
+        this.waitingToReturnToLobby = new AcknowledgementTracker();
     }
 
     addMember(playerId) {
@@ -198,6 +201,22 @@ class LobbyMember {
         this.name = playerCustomization.name;
         this.playerColor = playerCustomization.playerColor; 
         this.shieldColor = playerCustomization.shieldColor;
+    }
+}
+
+class AcknowledgementTracker {
+
+    constructor(expectedIds){
+        this.reset(expectedIds);
+    }
+
+    reset(expectedIds) {
+        this.expected = expectedIds;
+        this.received = [];
+    }
+
+    markAsAcknowledged(id) {
+        this.received.push(id);
     }
 }
 

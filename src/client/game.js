@@ -4,7 +4,7 @@ window.onload = function() {
         width: SDRGame.GameConstants.WINDOW_WIDTH,
         height: SDRGame.GameConstants.WINDOW_HEIGHT,
         backgroundColor: 0x151515,
-        scene: [SceneMain, SceneHome, SceneLobby, SceneActiveGame],
+        scene: [SceneMain, SceneHome, SceneLobby, SceneActiveGame, SceneScoreboard],
         pixelArt: true,
         physics: {
             default: 'arcade',

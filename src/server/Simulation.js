@@ -281,6 +281,24 @@ class Simulation {
         }
     }
 
+    gameIsOver() {
+        return this.roundEnded;
+    }
+
+    getPlayerScoreboardOrder() {
+        const scoreBoardOrder = this.playerEliminationOrder.map(p => p.id).reverse();
+
+        if (this.allArePlayersEliminated()) {
+            return scoreBoardOrder;
+        } else {
+            const winningPlayer = Array.from(this.playersById.entries())
+                .map(([_, p]) => p)
+                .find(p => !p.isEliminated);
+            
+            return [winningPlayer.id, ...scoreBoardOrder];
+        }
+    }
+
     spawnBall(spawnPoint, world) {
         const angle = 2 * Math.PI * Math.random();
         const xVel = BALL_SPEED * Math.cos(angle);
@@ -296,6 +314,10 @@ class Simulation {
         this.ballsById.set(ball.id, ball);
     
         Composite.add(world, body);
+    }
+
+    allArePlayersEliminated() {
+        return this.playerEliminationOrder.length === this.playersById.size;
     }
 }
 
@@ -383,10 +405,6 @@ function getMovementDirection(moveTowardsNegative, moveTowardsPositive) {
     }
 
     return 0;
-}
-
-function toWindowCoordinates(x, y) {
-    return [x + 290, y + 10];
 }
 
 function makeWall(x, y, w, h, angle) {
