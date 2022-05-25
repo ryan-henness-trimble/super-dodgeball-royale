@@ -1,0 +1,26 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@v3.12.12
+        with:
+          heroku_api_key: '845c9e62-2975-4a42-b566-5196977f5bec'
+          heroku_app_name: "super-dodgeball-royale"
+          heroku_email: "ryan_henness@trimble.com"
+  build-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@v3.12.12
+        with:
+          heroku_api_key: '845c9e62-2975-4a42-b566-5196977f5bec'
+          heroku_app_name: "super-dodgeball-royale-server"
+          heroku_email: "ryan_henness@trimble.com"
