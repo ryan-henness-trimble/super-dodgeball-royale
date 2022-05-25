@@ -16,6 +16,7 @@ jobs:
           heroku_app_name: "super-dodgeball-royale"
           heroku_email: "ryan_henness@trimble.com"
   build-server:
+    needs: build-client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
