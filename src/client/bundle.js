@@ -1,182 +1,4 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-
-/**
- * Expose `Emitter`.
- */
-
-exports.Emitter = Emitter;
-
-/**
- * Initialize a new `Emitter`.
- *
- * @api public
- */
-
-function Emitter(obj) {
-  if (obj) return mixin(obj);
-}
-
-/**
- * Mixin the emitter properties.
- *
- * @param {Object} obj
- * @return {Object}
- * @api private
- */
-
-function mixin(obj) {
-  for (var key in Emitter.prototype) {
-    obj[key] = Emitter.prototype[key];
-  }
-  return obj;
-}
-
-/**
- * Listen on the given `event` with `fn`.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.on =
-Emitter.prototype.addEventListener = function(event, fn){
-  this._callbacks = this._callbacks || {};
-  (this._callbacks['$' + event] = this._callbacks['$' + event] || [])
-    .push(fn);
-  return this;
-};
-
-/**
- * Adds an `event` listener that will be invoked a single
- * time then automatically removed.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.once = function(event, fn){
-  function on() {
-    this.off(event, on);
-    fn.apply(this, arguments);
-  }
-
-  on.fn = fn;
-  this.on(event, on);
-  return this;
-};
-
-/**
- * Remove the given callback for `event` or all
- * registered callbacks.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.off =
-Emitter.prototype.removeListener =
-Emitter.prototype.removeAllListeners =
-Emitter.prototype.removeEventListener = function(event, fn){
-  this._callbacks = this._callbacks || {};
-
-  // all
-  if (0 == arguments.length) {
-    this._callbacks = {};
-    return this;
-  }
-
-  // specific event
-  var callbacks = this._callbacks['$' + event];
-  if (!callbacks) return this;
-
-  // remove all handlers
-  if (1 == arguments.length) {
-    delete this._callbacks['$' + event];
-    return this;
-  }
-
-  // remove specific handler
-  var cb;
-  for (var i = 0; i < callbacks.length; i++) {
-    cb = callbacks[i];
-    if (cb === fn || cb.fn === fn) {
-      callbacks.splice(i, 1);
-      break;
-    }
-  }
-
-  // Remove event specific arrays for event types that no
-  // one is subscribed for to avoid memory leak.
-  if (callbacks.length === 0) {
-    delete this._callbacks['$' + event];
-  }
-
-  return this;
-};
-
-/**
- * Emit `event` with the given args.
- *
- * @param {String} event
- * @param {Mixed} ...
- * @return {Emitter}
- */
-
-Emitter.prototype.emit = function(event){
-  this._callbacks = this._callbacks || {};
-
-  var args = new Array(arguments.length - 1)
-    , callbacks = this._callbacks['$' + event];
-
-  for (var i = 1; i < arguments.length; i++) {
-    args[i - 1] = arguments[i];
-  }
-
-  if (callbacks) {
-    callbacks = callbacks.slice(0);
-    for (var i = 0, len = callbacks.length; i < len; ++i) {
-      callbacks[i].apply(this, args);
-    }
-  }
-
-  return this;
-};
-
-// alias used for reserved events (protected method)
-Emitter.prototype.emitReserved = Emitter.prototype.emit;
-
-/**
- * Return array of callbacks for `event`.
- *
- * @param {String} event
- * @return {Array}
- * @api public
- */
-
-Emitter.prototype.listeners = function(event){
-  this._callbacks = this._callbacks || {};
-  return this._callbacks['$' + event] || [];
-};
-
-/**
- * Check if this emitter has `event` handlers.
- *
- * @param {String} event
- * @return {Boolean}
- * @api public
- */
-
-Emitter.prototype.hasListeners = function(event){
-  return !! this.listeners(event).length;
-};
-
-},{}],2:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -328,7 +150,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -2109,7 +1931,458 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":2,"buffer":3,"ieee754":26}],4:[function(require,module,exports){
+},{"base64-js":1,"buffer":2,"ieee754":3}],3:[function(require,module,exports){
+/*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
+exports.read = function (buffer, offset, isLE, mLen, nBytes) {
+  var e, m
+  var eLen = (nBytes * 8) - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var nBits = -7
+  var i = isLE ? (nBytes - 1) : 0
+  var d = isLE ? -1 : 1
+  var s = buffer[offset + i]
+
+  i += d
+
+  e = s & ((1 << (-nBits)) - 1)
+  s >>= (-nBits)
+  nBits += eLen
+  for (; nBits > 0; e = (e * 256) + buffer[offset + i], i += d, nBits -= 8) {}
+
+  m = e & ((1 << (-nBits)) - 1)
+  e >>= (-nBits)
+  nBits += mLen
+  for (; nBits > 0; m = (m * 256) + buffer[offset + i], i += d, nBits -= 8) {}
+
+  if (e === 0) {
+    e = 1 - eBias
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity)
+  } else {
+    m = m + Math.pow(2, mLen)
+    e = e - eBias
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
+}
+
+exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c
+  var eLen = (nBytes * 8) - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
+  var i = isLE ? 0 : (nBytes - 1)
+  var d = isLE ? 1 : -1
+  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
+
+  value = Math.abs(value)
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0
+    e = eMax
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2)
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--
+      c *= 2
+    }
+    if (e + eBias >= 1) {
+      value += rt / c
+    } else {
+      value += rt * Math.pow(2, 1 - eBias)
+    }
+    if (value * c >= 2) {
+      e++
+      c /= 2
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0
+      e = eMax
+    } else if (e + eBias >= 1) {
+      m = ((value * c) - 1) * Math.pow(2, mLen)
+      e = e + eBias
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
+      e = 0
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
+
+  e = (e << mLen) | m
+  eLen += mLen
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
+
+  buffer[offset + i - d] |= s * 128
+}
+
+},{}],4:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],5:[function(require,module,exports){
+
+/**
+ * Expose `Emitter`.
+ */
+
+exports.Emitter = Emitter;
+
+/**
+ * Initialize a new `Emitter`.
+ *
+ * @api public
+ */
+
+function Emitter(obj) {
+  if (obj) return mixin(obj);
+}
+
+/**
+ * Mixin the emitter properties.
+ *
+ * @param {Object} obj
+ * @return {Object}
+ * @api private
+ */
+
+function mixin(obj) {
+  for (var key in Emitter.prototype) {
+    obj[key] = Emitter.prototype[key];
+  }
+  return obj;
+}
+
+/**
+ * Listen on the given `event` with `fn`.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.on =
+Emitter.prototype.addEventListener = function(event, fn){
+  this._callbacks = this._callbacks || {};
+  (this._callbacks['$' + event] = this._callbacks['$' + event] || [])
+    .push(fn);
+  return this;
+};
+
+/**
+ * Adds an `event` listener that will be invoked a single
+ * time then automatically removed.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.once = function(event, fn){
+  function on() {
+    this.off(event, on);
+    fn.apply(this, arguments);
+  }
+
+  on.fn = fn;
+  this.on(event, on);
+  return this;
+};
+
+/**
+ * Remove the given callback for `event` or all
+ * registered callbacks.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.off =
+Emitter.prototype.removeListener =
+Emitter.prototype.removeAllListeners =
+Emitter.prototype.removeEventListener = function(event, fn){
+  this._callbacks = this._callbacks || {};
+
+  // all
+  if (0 == arguments.length) {
+    this._callbacks = {};
+    return this;
+  }
+
+  // specific event
+  var callbacks = this._callbacks['$' + event];
+  if (!callbacks) return this;
+
+  // remove all handlers
+  if (1 == arguments.length) {
+    delete this._callbacks['$' + event];
+    return this;
+  }
+
+  // remove specific handler
+  var cb;
+  for (var i = 0; i < callbacks.length; i++) {
+    cb = callbacks[i];
+    if (cb === fn || cb.fn === fn) {
+      callbacks.splice(i, 1);
+      break;
+    }
+  }
+
+  // Remove event specific arrays for event types that no
+  // one is subscribed for to avoid memory leak.
+  if (callbacks.length === 0) {
+    delete this._callbacks['$' + event];
+  }
+
+  return this;
+};
+
+/**
+ * Emit `event` with the given args.
+ *
+ * @param {String} event
+ * @param {Mixed} ...
+ * @return {Emitter}
+ */
+
+Emitter.prototype.emit = function(event){
+  this._callbacks = this._callbacks || {};
+
+  var args = new Array(arguments.length - 1)
+    , callbacks = this._callbacks['$' + event];
+
+  for (var i = 1; i < arguments.length; i++) {
+    args[i - 1] = arguments[i];
+  }
+
+  if (callbacks) {
+    callbacks = callbacks.slice(0);
+    for (var i = 0, len = callbacks.length; i < len; ++i) {
+      callbacks[i].apply(this, args);
+    }
+  }
+
+  return this;
+};
+
+// alias used for reserved events (protected method)
+Emitter.prototype.emitReserved = Emitter.prototype.emit;
+
+/**
+ * Return array of callbacks for `event`.
+ *
+ * @param {String} event
+ * @return {Array}
+ * @api public
+ */
+
+Emitter.prototype.listeners = function(event){
+  this._callbacks = this._callbacks || {};
+  return this._callbacks['$' + event] || [];
+};
+
+/**
+ * Check if this emitter has `event` handlers.
+ *
+ * @param {String} event
+ * @return {Boolean}
+ * @api public
+ */
+
+Emitter.prototype.hasListeners = function(event){
+  return !! this.listeners(event).length;
+};
+
+},{}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasCORS = void 0;
@@ -2125,7 +2398,7 @@ catch (err) {
 }
 exports.hasCORS = value;
 
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 "use strict";
 // imported from https://github.com/galkn/querystring
 /**
@@ -2166,7 +2439,7 @@ function decode(qs) {
 }
 exports.decode = decode;
 
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parse = void 0;
@@ -2221,7 +2494,7 @@ function queryKey(uri, query) {
     return data;
 }
 
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // imported from https://github.com/unshiftio/yeast
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2278,7 +2551,7 @@ exports.yeast = yeast;
 for (; i < length; i++)
     map[alphabet[i]] = i;
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = (() => {
@@ -2293,7 +2566,7 @@ exports.default = (() => {
     }
 })();
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parse = exports.installTimerFunctions = exports.transports = exports.Transport = exports.protocol = exports.Socket = void 0;
@@ -2309,7 +2582,7 @@ Object.defineProperty(exports, "installTimerFunctions", { enumerable: true, get:
 var parseuri_js_1 = require("./contrib/parseuri.js");
 Object.defineProperty(exports, "parse", { enumerable: true, get: function () { return parseuri_js_1.parse; } });
 
-},{"./contrib/parseuri.js":6,"./socket.js":10,"./transport.js":11,"./transports/index.js":12,"./util.js":17}],10:[function(require,module,exports){
+},{"./contrib/parseuri.js":8,"./socket.js":12,"./transport.js":13,"./transports/index.js":14,"./util.js":19}],12:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2922,7 +3195,7 @@ class Socket extends component_emitter_1.Emitter {
 exports.Socket = Socket;
 Socket.protocol = engine_io_parser_1.protocol;
 
-},{"./contrib/parseqs.js":5,"./contrib/parseuri.js":6,"./transports/index.js":12,"./util.js":17,"@socket.io/component-emitter":1,"debug":18,"engine.io-parser":25}],11:[function(require,module,exports){
+},{"./contrib/parseqs.js":7,"./contrib/parseuri.js":8,"./transports/index.js":14,"./util.js":19,"@socket.io/component-emitter":5,"debug":20,"engine.io-parser":27}],13:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3050,7 +3323,7 @@ class Transport extends component_emitter_1.Emitter {
 }
 exports.Transport = Transport;
 
-},{"./util.js":17,"@socket.io/component-emitter":1,"debug":18,"engine.io-parser":25}],12:[function(require,module,exports){
+},{"./util.js":19,"@socket.io/component-emitter":5,"debug":20,"engine.io-parser":27}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transports = void 0;
@@ -3061,7 +3334,7 @@ exports.transports = {
     polling: polling_js_1.Polling
 };
 
-},{"./polling.js":13,"./websocket.js":15}],13:[function(require,module,exports){
+},{"./polling.js":15,"./websocket.js":17}],15:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3490,7 +3763,7 @@ function unloadHandler() {
     }
 }
 
-},{"../contrib/parseqs.js":5,"../contrib/yeast.js":7,"../globalThis.js":8,"../transport.js":11,"../util.js":17,"./xmlhttprequest.js":16,"@socket.io/component-emitter":1,"debug":18,"engine.io-parser":25}],14:[function(require,module,exports){
+},{"../contrib/parseqs.js":7,"../contrib/yeast.js":9,"../globalThis.js":10,"../transport.js":13,"../util.js":19,"./xmlhttprequest.js":18,"@socket.io/component-emitter":5,"debug":20,"engine.io-parser":27}],16:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3511,7 +3784,7 @@ exports.WebSocket = globalThis_js_1.default.WebSocket || globalThis_js_1.default
 exports.usingBrowserWebSocket = true;
 exports.defaultBinaryType = "arraybuffer";
 
-},{"../globalThis.js":8}],15:[function(require,module,exports){
+},{"../globalThis.js":10}],17:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -3714,7 +3987,7 @@ class WS extends transport_js_1.Transport {
 exports.WS = WS;
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../contrib/parseqs.js":5,"../contrib/yeast.js":7,"../transport.js":11,"../util.js":17,"./websocket-constructor.js":14,"buffer":3,"debug":18,"engine.io-parser":25}],16:[function(require,module,exports){
+},{"../contrib/parseqs.js":7,"../contrib/yeast.js":9,"../transport.js":13,"../util.js":19,"./websocket-constructor.js":16,"buffer":2,"debug":20,"engine.io-parser":27}],18:[function(require,module,exports){
 "use strict";
 // browser shim for xmlhttprequest module
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -3741,7 +4014,7 @@ function default_1(opts) {
 }
 exports.default = default_1;
 
-},{"../contrib/has-cors.js":4,"../globalThis.js":8}],17:[function(require,module,exports){
+},{"../contrib/has-cors.js":6,"../globalThis.js":10}],19:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3804,7 +4077,7 @@ function utf8Length(str) {
     return length;
 }
 
-},{"./globalThis.js":8}],18:[function(require,module,exports){
+},{"./globalThis.js":10}],20:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -4077,7 +4350,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":19,"_process":27}],19:[function(require,module,exports){
+},{"./common":21,"_process":4}],21:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -4353,7 +4626,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":20}],20:[function(require,module,exports){
+},{"ms":22}],22:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -4517,7 +4790,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],21:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ERROR_PACKET = exports.PACKET_TYPES_REVERSE = exports.PACKET_TYPES = void 0;
@@ -4538,7 +4811,7 @@ Object.keys(PACKET_TYPES).forEach(key => {
 const ERROR_PACKET = { type: "error", data: "parser error" };
 exports.ERROR_PACKET = ERROR_PACKET;
 
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decode = exports.encode = void 0;
@@ -4587,7 +4860,7 @@ const decode = (base64) => {
 };
 exports.decode = decode;
 
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const commons_js_1 = require("./commons.js");
@@ -4640,7 +4913,7 @@ const mapBinary = (data, binaryType) => {
 };
 exports.default = decodePacket;
 
-},{"./commons.js":21,"./contrib/base64-arraybuffer.js":22}],24:[function(require,module,exports){
+},{"./commons.js":23,"./contrib/base64-arraybuffer.js":24}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const commons_js_1 = require("./commons.js");
@@ -4685,7 +4958,7 @@ const encodeBlobAsBase64 = (data, callback) => {
 };
 exports.default = encodePacket;
 
-},{"./commons.js":21}],25:[function(require,module,exports){
+},{"./commons.js":23}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decodePayload = exports.decodePacket = exports.encodePayload = exports.encodePacket = exports.protocol = void 0;
@@ -4725,280 +4998,7 @@ const decodePayload = (encodedPayload, binaryType) => {
 exports.decodePayload = decodePayload;
 exports.protocol = 4;
 
-},{"./decodePacket.js":23,"./encodePacket.js":24}],26:[function(require,module,exports){
-/*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
-exports.read = function (buffer, offset, isLE, mLen, nBytes) {
-  var e, m
-  var eLen = (nBytes * 8) - mLen - 1
-  var eMax = (1 << eLen) - 1
-  var eBias = eMax >> 1
-  var nBits = -7
-  var i = isLE ? (nBytes - 1) : 0
-  var d = isLE ? -1 : 1
-  var s = buffer[offset + i]
-
-  i += d
-
-  e = s & ((1 << (-nBits)) - 1)
-  s >>= (-nBits)
-  nBits += eLen
-  for (; nBits > 0; e = (e * 256) + buffer[offset + i], i += d, nBits -= 8) {}
-
-  m = e & ((1 << (-nBits)) - 1)
-  e >>= (-nBits)
-  nBits += mLen
-  for (; nBits > 0; m = (m * 256) + buffer[offset + i], i += d, nBits -= 8) {}
-
-  if (e === 0) {
-    e = 1 - eBias
-  } else if (e === eMax) {
-    return m ? NaN : ((s ? -1 : 1) * Infinity)
-  } else {
-    m = m + Math.pow(2, mLen)
-    e = e - eBias
-  }
-  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
-}
-
-exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
-  var e, m, c
-  var eLen = (nBytes * 8) - mLen - 1
-  var eMax = (1 << eLen) - 1
-  var eBias = eMax >> 1
-  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
-  var i = isLE ? 0 : (nBytes - 1)
-  var d = isLE ? 1 : -1
-  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
-
-  value = Math.abs(value)
-
-  if (isNaN(value) || value === Infinity) {
-    m = isNaN(value) ? 1 : 0
-    e = eMax
-  } else {
-    e = Math.floor(Math.log(value) / Math.LN2)
-    if (value * (c = Math.pow(2, -e)) < 1) {
-      e--
-      c *= 2
-    }
-    if (e + eBias >= 1) {
-      value += rt / c
-    } else {
-      value += rt * Math.pow(2, 1 - eBias)
-    }
-    if (value * c >= 2) {
-      e++
-      c /= 2
-    }
-
-    if (e + eBias >= eMax) {
-      m = 0
-      e = eMax
-    } else if (e + eBias >= 1) {
-      m = ((value * c) - 1) * Math.pow(2, mLen)
-      e = e + eBias
-    } else {
-      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
-      e = 0
-    }
-  }
-
-  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
-
-  e = (e << mLen) | m
-  eLen += mLen
-  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
-
-  buffer[offset + i - d] |= s * 128
-}
-
-},{}],27:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],28:[function(require,module,exports){
+},{"./decodePacket.js":25,"./encodePacket.js":26}],28:[function(require,module,exports){
 "use strict";
 /**
  * Initialize backoff timer with `opts`.
@@ -5538,7 +5538,7 @@ class Manager extends component_emitter_1.Emitter {
 }
 exports.Manager = Manager;
 
-},{"./contrib/backo2.js":28,"./on.js":31,"./socket.js":32,"@socket.io/component-emitter":1,"debug":34,"engine.io-client":9,"socket.io-parser":38}],31:[function(require,module,exports){
+},{"./contrib/backo2.js":28,"./on.js":31,"./socket.js":32,"@socket.io/component-emitter":5,"debug":34,"engine.io-client":11,"socket.io-parser":38}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.on = void 0;
@@ -6168,7 +6168,7 @@ class Socket extends component_emitter_1.Emitter {
 }
 exports.Socket = Socket;
 
-},{"./on.js":31,"@socket.io/component-emitter":1,"debug":34,"socket.io-parser":38}],33:[function(require,module,exports){
+},{"./on.js":31,"@socket.io/component-emitter":5,"debug":34,"socket.io-parser":38}],33:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -6240,13 +6240,13 @@ function url(uri, path = "", loc) {
 }
 exports.url = url;
 
-},{"debug":34,"engine.io-client":9}],34:[function(require,module,exports){
-arguments[4][18][0].apply(exports,arguments)
-},{"./common":35,"_process":27,"dup":18}],35:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19,"ms":36}],36:[function(require,module,exports){
+},{"debug":34,"engine.io-client":11}],34:[function(require,module,exports){
 arguments[4][20][0].apply(exports,arguments)
-},{"dup":20}],37:[function(require,module,exports){
+},{"./common":35,"_process":4,"dup":20}],35:[function(require,module,exports){
+arguments[4][21][0].apply(exports,arguments)
+},{"dup":21,"ms":36}],36:[function(require,module,exports){
+arguments[4][22][0].apply(exports,arguments)
+},{"dup":22}],37:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reconstructPacket = exports.deconstructPacket = void 0;
@@ -6625,7 +6625,7 @@ class BinaryReconstructor {
     }
 }
 
-},{"./binary.js":37,"./is-binary.js":39,"@socket.io/component-emitter":1,"debug":34}],39:[function(require,module,exports){
+},{"./binary.js":37,"./is-binary.js":39,"@socket.io/component-emitter":5,"debug":34}],39:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasBinary = exports.isBinary = void 0;
@@ -6685,28 +6685,41 @@ exports.hasBinary = hasBinary;
 },{}],40:[function(require,module,exports){
 (function (global){(function (){
 const { GameClient } = require('./GameClient');
+const { ServerConnection } = require('./ServerConnection');
 const { gameevents } = require('../shared/gameevents');
 const { gameconstants } = require('../shared/gameconstants');
 const { Messaging } = require('../shared/Messaging');
+const { Configuration } = require('../shared/appsettings');
 
+// TODO remove GameClient
 global.window.SDRGame = {
     GameClient,
+    ServerConnection,
     Messaging,
     gameevents,
     GameConstants: gameconstants,
+    Configuration
 };
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../shared/Messaging":42,"../shared/gameconstants":44,"../shared/gameevents":45,"./GameClient":41}],41:[function(require,module,exports){
+},{"../shared/Messaging":43,"../shared/appsettings":44,"../shared/gameconstants":46,"../shared/gameevents":47,"./GameClient":41,"./ServerConnection":42}],41:[function(require,module,exports){
 const { io } = require('socket.io-client');
 const { Messaging } = require('../shared/Messaging');
 const { channels } = require('../shared/channels');
-const { lobbycommands } = require('../shared/lobbycommands');
 
 class GameClient {
 
     constructor(serverUrl) {
-        this.socket = io(serverUrl);
+        this.socket = io(serverUrl, {
+              cors: {
+                origin: "*",
+                methods: ["GET", "POST"]
+              },
+              transports: ["websocket", "polling"],
+              extraHeaders: {
+                "Access-Control-Allow-Origin": "*"
+              }
+        });
     }
 
     get playerId() {
@@ -6761,24 +6774,131 @@ class GameClient {
 
 exports.GameClient = GameClient;
 
-},{"../shared/Messaging":42,"../shared/channels":43,"../shared/lobbycommands":46,"socket.io-client":29}],42:[function(require,module,exports){
+},{"../shared/Messaging":43,"../shared/channels":45,"socket.io-client":29}],42:[function(require,module,exports){
+const { io } = require('socket.io-client');
+const { Messaging } = require('../shared/Messaging');
+
+const doNothing = () => {};
+
+class LobbyConnection {
+
+    constructor(socket) {
+        this.socket = socket;
+
+        this.lobbyState = null;
+        this.lobbyUpdateCallback = doNothing;
+        socket.on(Messaging.Channels.LOBBY_UPDATES, this._handleLobbyUpdate.bind(this));
+        
+        this.gameUpdateCallback = doNothing;
+        socket.on(Messaging.Channels.GAME_UPDATES, this._handleGameUpdate.bind(this));
+
+        this.simUpdateCallback = doNothing;
+        socket.on(Messaging.Channels.SIM_UPDATES, this._handleSimUpdate.bind(this));
+    }
+
+    get playerId() {
+        return this.socket.id;
+    }
+
+    sendLobbyCommand(command) {
+        this.socket.emit(Messaging.Channels.LOBBY_COMMANDS, command);
+    }
+
+    sendGameCommand(command) {
+        this.socket.emit(Messaging.Channels.GAME_COMMANDS, command);
+    }
+
+    sendSimCommand(command) {
+        const networkCommand = Messaging.SimCommands.toNetworkFormat(command);
+        this.socket.emit(Messaging.Channels.SIM_COMMANDS, networkCommand);
+    }
+
+    subscribeToLobbyUpdates(onLobbyUpdate) {
+        this.lobbyUpdateCallback = onLobbyUpdate;
+    }
+
+    unsubscribeFromLobbyUpdates() {
+        this.lobbyUpdateCallback = doNothing;
+    }
+
+    subscribeToGameUpdates(onGameUpdate) {
+        this.gameUpdateCallback = onGameUpdate;
+    }
+
+    unsubscribeFromGameUpdates() {
+        this.gameUpdateCallback = doNothing;
+    }
+
+    subscribeToSimUpdates(onSimUpdate) {
+        this.simUpdateCallback = onSimUpdate;
+    }
+
+    unsubscribeFromSimUpdates() {
+        this.simUpdateCallback = doNothing;
+    }
+
+    unsubscribeFromAll() {
+        this.unsubscribeFromLobbyUpdates();
+        this.unsubscribeFromGameUpdates();
+        this.unsubscribeFromSimUpdates();
+    }
+
+    _handleLobbyUpdate(lobbyState) {
+        this.lobbyState = lobbyState;
+
+        this.lobbyUpdateCallback(lobbyState);
+    }
+
+    _handleGameUpdate(msg) {
+        this.gameUpdateCallback(msg);
+    }
+
+    _handleSimUpdate(simState) {
+        this.simUpdateCallback(simState);
+    }
+}
+
+class ServerConnection {
+
+    constructor(serverUrl, connectionOptions) {
+        this.lobby = null;
+        this.socket = io(serverUrl, connectionOptions);
+    }
+
+    joinNewLobby(onSuccess, onFailure) {
+        this.socket.emit(Messaging.Channels.CREATE_LOBBY, (createResponse) => {
+            if (createResponse.success) {
+                this.joinExistingLobby(createResponse.lobbyCode, onSuccess, onFailure);
+            } else {
+                this.lobby = null;
+                onFailure();
+            }
+        });
+    }
+
+    joinExistingLobby(lobbyCode, onSuccess, onFailure) {
+        this.lobby = new LobbyConnection(this.socket);
+
+        this.socket.emit(Messaging.Channels.JOIN_LOBBY, lobbyCode, (response) => {
+            if (response.success) {
+                onSuccess();
+            } else {
+                this.lobby = null;
+                onFailure();
+            }
+        });
+    }
+}
+
+exports.ServerConnection = ServerConnection;
+
+},{"../shared/Messaging":43,"socket.io-client":29}],43:[function(require,module,exports){
 const Channels = {
     // no msg
     CREATE_LOBBY: 'create-lobby',
 
     // lobbyCode: string
     JOIN_LOBBY: 'join-lobby',
-
-    // {
-    // success: bool,
-    // lobbyCode: string
-    // }
-    LOBBY_CREATED: 'lobby-created',
-
-    // {
-    // success: bool
-    // }
-    LOBBY_JOINED: 'lobby-joined',
 
     // client to server
     // {
@@ -6801,48 +6921,48 @@ const Channels = {
     SIM_COMMANDS: 'sim-commands',
 };
 
-const LobbyUpdates = {
-    NEW_STATE: 'new-state',
-    GAME_STARTING: 'game-starting',
+const LobbyCommands = {
+    LEAVE_LOBBY: 'leave-lobby',
+    UPDATE_LOBBY_MEMBER: 'update-lobby-member',
 
-    createNewState: (lobbyState) => createMessage(LobbyUpdates.NEW_STATE, {
-        state: lobbyState
-    }),
+    createLeaveLobby: () => createMessage(LobbyCommands.LEAVE_LOBBY),
+    createUpdateLobbyMember: (playerCustomization) => createMessage(LobbyCommands.UPDATE_LOBBY_MEMBER, {
+        updatedPlayerCustomization: playerCustomization
+    })
+};
+
+const GameCommands = {
+    START_GAME: 'start-game',
+    CLIENT_READY: 'client-ready',
+    ON_SCOREBOARD: 'on-scoreboard',
+    RETURN_TO_LOBBY: 'return-to-lobby',
+
+    createStartGame: () => createMessage(GameCommands.START_GAME),
+    createClientReady: () => createMessage(GameCommands.CLIENT_READY),
+    createOnScoreboard: () => createMessage(GameCommands.ON_SCOREBOARD),
+    createReturnToLobby: () => createMessage(GameCommands.RETURN_TO_LOBBY)
+}
+
+const GameUpdates = {
+    GAME_STARTING: 'game-starting',
+    GAME_OVER: 'game-over',
+    RETURNING_TO_LOBBY: 'returning-to-lobby',
 
     // walls: [{ x,y,w,h,angle }]
     // players: [{ id,hp,x,y,angle,r,color,name }]
-    createGameStarting: (walls, players) => createMessage(LobbyUpdates.GAME_STARTING, {
+    createGameStarting: (walls, players) => createMessage(GameUpdates.GAME_STARTING, {
         initialState: {
             walls,
             players
         }
-    })
-}
-
-const LobbyCommands = {
-    ACK_JOIN: 'ack-join',
-    LEAVE_LOBBY: 'leave-lobby',
-    UPDATE_LOBBY_MEMBER: 'update-lobby-member',
-    START_GAME: 'start-game',
-
-    createAckJoin: () => createMessage(LobbyCommands.ACK_JOIN),
-    createLeaveLobby: () => createMessage(LobbyCommands.LEAVE_LOBBY),
-    createUpdateLobbyMember: (playerCustomization) => createMessage(LobbyCommands.UPDATE_LOBBY_MEMBER, {
-        updatedPlayerCustomization: playerCustomization
     }),
-    createStartGame: () => createMessage(LobbyCommands.START_GAME)
-};
 
-const GameCommands = {
-    CLIENT_READY: 'client-ready',
+    // playerScoreOrder: [ playerGameId ] in order of last eliminated to first eliminated
+    createGameOver: (playerScoreOrder) => createMessage(GameUpdates.GAME_OVER, {
+        scoreboard: playerScoreOrder
+    }),
 
-    createClientReady: () => createMessage(GameCommands.CLIENT_READY)
-}
-
-const GameUpdates = {
-    SENDING_SIM_UPDATES: 'sending-sim-updates',
-
-    createSendingSimUpdates: () => createMessage(GameUpdates.SENDING_SIM_UPDATES)
+    createReturningToLobby: () => createMessage(GameUpdates.RETURNING_TO_LOBBY)
 }
 
 const SimCommands = {
@@ -6895,13 +7015,31 @@ function addBitmaskOnCondition(condition, bitmask) {
 exports.Messaging = {
     Channels,
     LobbyCommands,
-    LobbyUpdates,
     GameCommands,
     GameUpdates,
     SimCommands
 };
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
+// Set USE_LOCAL_SETTINGS based on your development
+// Remember to change it back before merging to main
+const USE_LOCAL_SETTINGS = true;
+
+const localSettings = {
+    serverConnectionUrl: 'ws://localhost:8090',
+    serverCorsOrigins: ['http://localhost:8080']
+};
+
+const deployedSettings = {
+    serverConnectionUrl: 'wss://super-dodgeball-royale-server.herokuapp.com',
+    serverCorsOrigins: ['*']
+};
+
+const Configuration = USE_LOCAL_SETTINGS ? localSettings : deployedSettings;
+
+exports.Configuration = Configuration;
+
+},{}],45:[function(require,module,exports){
 const channels = {
     // no msg
     CREATE_LOBBY: 'create-lobby',
@@ -6942,7 +7080,7 @@ const channels = {
 
 exports.channels = channels;
 
-},{}],44:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 // player starting hp
 // invincibility on hit duration
 // player movement speed
@@ -6979,7 +7117,7 @@ exports.gameconstants = {
     
 };
 
-},{}],45:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 gameevents = {
     ROUND_OVER: 0,
     PLAYER_HIT: 1,
@@ -7005,29 +7143,5 @@ gameevents = {
 };
 
 exports.gameevents = gameevents;
-
-},{}],46:[function(require,module,exports){
-const commands = {
-    ACK_JOIN: 'ack-join',
-    LEAVE_LOBBY: 'leave-lobby',
-    START_GAME: 'start-game',
-
-    createAckJoin: () => createCommandWithoutData(commands.ACK_JOIN),
-};
-
-function createCommand(type, data) {
-    return {
-        type: type,
-        data: data
-    };
-}
-
-function createCommandWithoutData(type) {
-    return {
-        type: type
-    };
-}
-
-exports.lobbycommands = commands;
 
 },{}]},{},[40]);

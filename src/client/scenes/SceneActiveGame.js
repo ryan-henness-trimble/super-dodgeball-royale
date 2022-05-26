@@ -11,7 +11,8 @@ class SceneActiveGame extends Phaser.Scene {
         this.lastSimUpdate = null;
 
         this.add.text(20, 20, 'Active Game');
-        this.add.text(20, 60, 'Waiting for players');
+        
+        this.infoLabel = this.add.text(20, 60, 'Waiting for players');
 
         this.registerInputKeys();
         this.renderInitialGameState(initialState);
@@ -32,6 +33,7 @@ class SceneActiveGame extends Phaser.Scene {
 
     waitForSimUpdates() {
         if (this.lastSimUpdate) {
+            this.infoLabel.setText('Playing Game');
             this.updateFn = this.runGame.bind(this);
         }
     }
@@ -120,7 +122,9 @@ class SceneActiveGame extends Phaser.Scene {
             }
         });
 
-        const nextEvents = this.eventHistory.events.concat(state.events.map(e => this.formatEventAsString(e)));
+        const nextEvents = this.eventHistory.events
+            .concat(state.events.map(e => this.formatEventAsString(e)))
+            .slice(-20);
         this.eventHistory.events = nextEvents;
         this.eventHistory.label.setText(nextEvents.join('\n'));
     }
@@ -128,18 +132,8 @@ class SceneActiveGame extends Phaser.Scene {
     handleGameUpdate(msg) {
         switch (msg.type) {
             case SDRGame.Messaging.GameUpdates.GAME_OVER:
-                const scoreboard = msg.scoreboard.map(playerId => {
-                    const player = this.playersById.get(playerId);
-                    return {
-                        name: player.name,
-                        color: player.color
-                    };
-                });
-
-                this._startNewScene('scoreboard', {
-                    network: this.network,
-                    scoreboard
-                });
+                this.infoLabel.setText('Game Over');
+                setTimeout(() => this._transitionToScoreboard(msg.scoreboard), 5000);
                 break;
             default:
                 break;
@@ -161,6 +155,21 @@ class SceneActiveGame extends Phaser.Scene {
 
     formatHPLabelString(playerName, hp) {
         return `${playerName} HP: ${hp}`;
+    }
+
+    _transitionToScoreboard(scoreboard) {
+        const scoreboardWithPlayers = scoreboard.map(playerId => {
+            const player = this.playersById.get(playerId);
+            return {
+                name: player.name,
+                color: player.color
+            };
+        });
+
+        this._startNewScene('scoreboard', {
+            network: this.network,
+            scoreboard: scoreboardWithPlayers
+        });
     }
 
     _startNewScene(sceneName, sceneData) {

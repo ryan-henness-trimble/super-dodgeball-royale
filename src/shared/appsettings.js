@@ -1,6 +1,6 @@
 // Set USE_LOCAL_SETTINGS based on your development
 // Remember to change it back before merging to main
-const USE_LOCAL_SETTINGS = true;
+const USE_LOCAL_SETTINGS = false;
 
 const localSettings = {
     serverConnectionUrl: 'ws://localhost:8090',

@@ -10,11 +10,7 @@
 - Ryan: maps
   - have more maps
   - be able to choose map from lobby
-- Cole: finish the flow for a full game
-  - show a winner/scoreboard
-  - return to lobby screen
 - Huy: sound fx + music
-- Lane: leave lobby button
 
 ## Features
 
@@ -38,7 +34,7 @@ Value: 1-5
   - maybe also show what the controls are for playing the game
 - **make game screen (when the game is playing) look nice
 - make lobby scene look nice
-  - dependencies: lobby customization, leave lobby functionality
+  - dependencies: lobby customization
 - use a more rounded shield instead of a rectangle
   - requires changes to both server simulation and client rendering of shield
 - **animations
