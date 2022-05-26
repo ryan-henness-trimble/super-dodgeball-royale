@@ -7,8 +7,6 @@ class GameTracker {
         this.currentCommands = new Map();
         this.playerIdsToGameIds = new Map();
 
-        this.readyPlayers = [];
-
         this.sim = new Simulation();
 
         this.gameLoop = null;
@@ -21,8 +19,6 @@ class GameTracker {
 
     setUpNewGame(players) {
         this.stopGameLoop();
-
-        this.readyPlayers = [];
 
         const playerIds = players.map(p => p.playerId);
 
@@ -47,14 +43,6 @@ class GameTracker {
         });
 
         return initialState;
-    }
-
-    markPlayerAsReady(playerId) {
-        this.readyPlayers.push(playerId);
-    }
-
-    allPlayersReady() {
-        return this.readyPlayers.length === this.playerIdsToGameIds.size;
     }
 
     startGameLoop(renderStateCallback, onGameOver) {

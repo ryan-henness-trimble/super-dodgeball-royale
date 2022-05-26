@@ -10,12 +10,30 @@ class LobbyConnection {
 
         this.lobbyState = null;
         this.lobbyUpdateCallback = doNothing;
-
         socket.on(Messaging.Channels.LOBBY_UPDATES, this._handleLobbyUpdate.bind(this));
+        
+        this.gameUpdateCallback = doNothing;
+        socket.on(Messaging.Channels.GAME_UPDATES, this._handleGameUpdate.bind(this));
+
+        this.simUpdateCallback = doNothing;
+        socket.on(Messaging.Channels.SIM_UPDATES, this._handleSimUpdate.bind(this));
     }
 
     get playerId() {
         return this.socket.id;
+    }
+
+    sendLobbyCommand(command) {
+        this.socket.emit(Messaging.Channels.LOBBY_COMMANDS, command);
+    }
+
+    sendGameCommand(command) {
+        this.socket.emit(Messaging.Channels.GAME_COMMANDS, command);
+    }
+
+    sendSimCommand(command) {
+        const networkCommand = Messaging.SimCommands.toNetworkFormat(command);
+        this.socket.emit(Messaging.Channels.SIM_COMMANDS, networkCommand);
     }
 
     subscribeToLobbyUpdates(onLobbyUpdate) {
@@ -26,38 +44,72 @@ class LobbyConnection {
         this.lobbyUpdateCallback = doNothing;
     }
 
-    _handleLobbyUpdate(newState) {
-        this.lobbyState = newState;
+    subscribeToGameUpdates(onGameUpdate) {
+        this.gameUpdateCallback = onGameUpdate;
+    }
 
-        this.lobbyUpdateCallback(newState);
+    unsubscribeFromGameUpdates() {
+        this.gameUpdateCallback = doNothing;
+    }
+
+    subscribeToSimUpdates(onSimUpdate) {
+        this.simUpdateCallback = onSimUpdate;
+    }
+
+    unsubscribeFromSimUpdates() {
+        this.simUpdateCallback = doNothing;
+    }
+
+    unsubscribeFromAll() {
+        this.unsubscribeFromLobbyUpdates();
+        this.unsubscribeFromGameUpdates();
+        this.unsubscribeFromSimUpdates();
+    }
+
+    _handleLobbyUpdate(lobbyState) {
+        this.lobbyState = lobbyState;
+
+        this.lobbyUpdateCallback(lobbyState);
+    }
+
+    _handleGameUpdate(msg) {
+        this.gameUpdateCallback(msg);
+    }
+
+    _handleSimUpdate(simState) {
+        this.simUpdateCallback(simState);
     }
 }
 
 class ServerConnection {
 
-    constructor(serverUrl) {
-        this.socket = io(serverUrl);
+    constructor(serverUrl, connectionOptions) {
+        this.lobby = null;
+        this.socket = io(serverUrl, connectionOptions);
     }
 
     joinNewLobby(onSuccess, onFailure) {
         this.socket.emit(Messaging.Channels.CREATE_LOBBY, (createResponse) => {
             if (createResponse.success) {
-                this.socket.emit(Messaging.Channels.JOIN_LOBBY, createResponse.lobbyCode, (joinResponse) => {
-                    if (joinResponse.success) {
-                        const lobbyConnection = new LobbyConnection(this.socket);
-                        onSuccess(lobbyConnection);
-                    } else {
-                        onFailure();
-                    }
-                });
+                this.joinExistingLobby(createResponse.lobbyCode, onSuccess, onFailure);
             } else {
+                this.lobby = null;
                 onFailure();
             }
         });
     }
 
     joinExistingLobby(lobbyCode, onSuccess, onFailure) {
+        this.lobby = new LobbyConnection(this.socket);
 
+        this.socket.emit(Messaging.Channels.JOIN_LOBBY, lobbyCode, (response) => {
+            if (response.success) {
+                onSuccess();
+            } else {
+                this.lobby = null;
+                onFailure();
+            }
+        });
     }
 }
 

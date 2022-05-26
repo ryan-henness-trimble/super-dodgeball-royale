@@ -7,42 +7,37 @@ class SceneHome extends Phaser.Scene {
     preload() { }
 
     create({ network, messages }) {
-        const homeMessages = [].concat(messages);
+        const homeMessages = [...messages];
 
         this.network = network;
 
         const createLobbyBtn = document.getElementById('create-lobby-btn');
 
+        const transitionToLobby = () => this.scene.start('lobby', { network: this.network });
+
         createLobbyBtn.onclick = () => {
-            this.network.createLobby((msg) => {
-                if (msg.success) {
-                    this.scene.start('lobby', createLobbyInput(this.network, msg.lobbyCode));
-                } else {
-                    // write message create failed
-                    console.log('create failed');
-                }
-            })
+            this.network.joinNewLobby(
+                transitionToLobby,
+                () => console.log('create failed')
+            );
         };
 
         const joinLobbyBtn = document.getElementById('join-lobby-btn');
         const lobbyCodeInput = document.getElementById('lobby-code-input');
 
         joinLobbyBtn.onclick = () => {
-            this.scene.start('lobby', createLobbyInput(this.network, lobbyCodeInput.value));
+            this.network.joinExistingLobby(
+                lobbyCodeInput.value,
+                transitionToLobby,
+                () => console.log('failed to join lobby')
+            );
         };
 
         const container = document.getElementById('lobby-controls');
         container.style.display = 'block';
 
-        this.add.text(20, 20, 'Home Scene');
+        this.add.text(20, 20, 'Home');
 
         this.add.text(20, 60, homeMessages.join('\n'));
     }
-}
-
-function createLobbyInput(network, lobbyCode) {
-    return {
-        network: network,
-        code: lobbyCode
-    };
 }

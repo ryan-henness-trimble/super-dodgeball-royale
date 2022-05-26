@@ -2,20 +2,14 @@ class SceneMain extends Phaser.Scene {
 
     constructor() {
         super('main');
-
-        // TODO pull this from appsettings
-        this.SERVER_URL = 'wss://super-dodgeball-royale-server.herokuapp.com';
     }
 
     preload() { }
 
     create() {
-        this.add.text(20, 20, 'Main Scene');
-
-        const network = new SDRGame.GameClient(this.SERVER_URL);
+        const network = this.connectToServer();
 
         const debugBtn = document.getElementById('log-debug-info');
-
         debugBtn.onclick = () => {
             network.socket.emit('a', (x) => console.log(x));
         };
@@ -24,5 +18,20 @@ class SceneMain extends Phaser.Scene {
             network,
             messages: []
         });
+    }
+
+    connectToServer() {
+        const serverUrl = SDRGame.Configuration.serverConnectionUrl;
+        const options = {
+            cors: {
+                origin: "*",
+                methods: ["GET", "POST"]
+            },
+            transports: ["websocket", "polling"],
+            extraHeaders: {
+                "Access-Control-Allow-Origin": "*"
+            }
+        };
+        return new SDRGame.ServerConnection(serverUrl, options);
     }
 }

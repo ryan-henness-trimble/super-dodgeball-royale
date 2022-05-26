@@ -12,55 +12,52 @@ class SceneLobby extends Phaser.Scene {
         this.load.html('playerInputForm', '../htmlAssets/playerNameInput.html');
     }
 
-    create({ network, code }) {
-        this.network = network;
+    create({ network }) {
+        if (!network.lobby) {
+            this._startNewScene('home', { network, messages: ['unable to access lobby'] });
+        }
 
         const container = document.getElementById('lobby-controls');
         container.style.display = 'none';
 
-        network.joinLobby(
-            code,
-            () => console.log('joined lobby'),
-            () => this.scene.start('home', {
-                network,
-                messages: ['Failed to join lobby']
-            }),
-            this.handleLobbyUpdate.bind(this)
-        );
+        this.network = network;
 
-        this.add.text(20, 20, 'Lobby Scene');
+        this.network.lobby.subscribeToLobbyUpdates(this.renderLobbyState.bind(this));
+        this.network.lobby.subscribeToGameUpdates(this.handleGameUpdate.bind(this));
+
+        this.add.text(20, 20, 'Lobby');
 
         this.codeLabel = this.add.text(20, 50, 'Code:')
         this.playersLabel = this.add.text(20, 80, 'Players:');
 
         this.playerGraphicsList = [];
 
+        console.log(this._formatLobbyCodeString(this.network.lobby.lobbyState.code));
+
         this.createStartButton();
+        this.createLeaveLobbyButton();
+        this.renderLobbyState(this.network.lobby.lobbyState);
     }
 
-    handleLobbyUpdate(msg) {
+    handleGameUpdate(msg) {
         switch (msg.type) {
-            case SDRGame.Messaging.LobbyUpdates.NEW_STATE:
-                this.receiveNewState(msg.state);
-                break;
-            case SDRGame.Messaging.LobbyUpdates.GAME_STARTING:
-                console.log('switching scenes');
-                this.scene.start('active-game', {
+            case SDRGame.Messaging.GameUpdates.GAME_STARTING:
+                this._startNewScene('active-game', {
                     network: this.network,
                     initialState: msg.initialState
                 });
                 break;
+            default:
+                break;
         }
     }
 
-    receiveNewState(lobbyState) {
+    renderLobbyState(lobbyState) {
         // code
         // host
         // members [{ id, name, playerColor, shieldColor }]
 
-        const codeStr = `Code: ${lobbyState.code}`;
-        this.codeLabel.setText(codeStr);
-        console.log(codeStr);
+        this.codeLabel.setText(this._formatLobbyCodeString(lobbyState.code));
 
         this.playerGraphicsList.forEach(p => p.destroy());
         this.playerGraphicsList = [];
@@ -68,7 +65,7 @@ class SceneLobby extends Phaser.Scene {
             const playerShield = this.add.rectangle(40, -15, this.GameConstants.PLAYER_HITBOX_RADIUS*1.8, 25, m.shieldColor);
             const playerBall = this.add.circle(40, 0, this.GameConstants.PLAYER_HITBOX_RADIUS, m.playerColor);
 
-            const name = m.id === this.network.playerId
+            const name = m.id === this.network.lobby.playerId
                 ? `${m.name} (you)`
                 : m.name;
             const playerLabel = this.add.text(80, -10, name);
@@ -89,7 +86,7 @@ class SceneLobby extends Phaser.Scene {
         this.createColorPicker(lobbyState, "Select Player Color:", "playerColor", 600, 300);
         this.createColorPicker(lobbyState, "Select Shield Color:", "shieldColor", 600, 450);
 
-        if (this.network.playerId === lobbyState.host) {
+        if (this.network.lobby.playerId === lobbyState.host) {
             this.showStartButton();
         } else {
             this.hideStartButton();
@@ -107,7 +104,7 @@ class SceneLobby extends Phaser.Scene {
     createColorPicker(lobbyState, pickerTitle, playerPropertyToUpdate, containerX, containerY)
     {
         const pickerObjects = [];
-        let currentPlayerState = lobbyState.members.find(m => m.id === this.network.playerId);
+        let currentPlayerState = lobbyState.members.find(m => m.id === this.network.lobby.playerId);
         this.GameConstants.COLOR_PICKER_CONSTANTS.DEFAULT_COLOR_OPTIONS.forEach((color, idx) => {
             if (idx < this.GameConstants.COLOR_PICKER_CONSTANTS.COLORS_AVAILABLE)
             {
@@ -123,7 +120,7 @@ class SceneLobby extends Phaser.Scene {
                         {
                             currentPlayerState[playerPropertyToUpdate] = color;
                             const updateLobbyMemberCommand = SDRGame.Messaging.LobbyCommands.createUpdateLobbyMember(currentPlayerState);
-                            this.network.sendLobbyCommand(updateLobbyMemberCommand);
+                            this.network.lobby.sendLobbyCommand(updateLobbyMemberCommand);
                         }
                     });
 
@@ -179,27 +176,42 @@ class SceneLobby extends Phaser.Scene {
         if (event.target.name === 'changeNameButton')
         {
             let playerName = this.getPlayerNameText();
-            let currentPlayerState = lobbyState.members.find(m => m.id === this.network.playerId);
+            let currentPlayerState = lobbyState.members.find(m => m.id === this.network.lobby.playerId);
             if (currentPlayerState && playerName)
             {
                 currentPlayerState.name = playerName;
                 const updateLobbyMemberCommand = SDRGame.Messaging.LobbyCommands.createUpdateLobbyMember(currentPlayerState);
-                this.network.sendLobbyCommand(updateLobbyMemberCommand);
+                this.network.lobby.sendLobbyCommand(updateLobbyMemberCommand);
             }
         }
     }
 
     createStartButton() {
-        const btnBack = this.add.rectangle(0, 0, 140, 40, 0x109ce8)
-            .setInteractive()
-            .on('pointerdown', () => {
-                const command = SDRGame.Messaging.LobbyCommands.createStartGame();
-                this.network.sendLobbyCommand(command);
-            });
-        const btnText = this.add.text(-50, -10, 'Start Game');
-        this.startGameBtn = this.add.container(600, 50, [btnBack, btnText]);
+        this.startGameBtn = this.createButtonObject(600, 50, 'Start Game', () => {
+            const command = SDRGame.Messaging.GameCommands.createStartGame();
+            this.network.lobby.sendGameCommand(command);
+        });
 
         this.hideStartButton();
+    }
+
+    createLeaveLobbyButton() {
+        this.leaveLobbyBtn = this.createButtonObject(800, 50, 'Leave Lobby', () => {
+            const command = SDRGame.Messaging.LobbyCommands.createLeaveLobby();
+            this.network.lobby.sendLobbyCommand(command);
+
+            this._startNewScene('home', { network: this.network, messages: [] });
+        });
+    }
+
+    createButtonObject(x, y, label, onClick) {
+        const btnText = this.add.text(0, 0, label);
+        btnText.setOrigin(0.5, 0.5);
+        const btnBack = this.add.rectangle(0, 0, btnText.width + 30, 40, 0x109ce8)
+            .setInteractive()
+            .on('pointerdown', onClick);
+        
+        return this.add.container(x, y, [btnBack, btnText]);
     }
 
     hideStartButton() {
@@ -210,5 +222,15 @@ class SceneLobby extends Phaser.Scene {
     showStartButton() {
         this.startGameBtn.setActive(true);
         this.startGameBtn.setVisible(true);
+    }
+
+    _startNewScene(sceneName, sceneData) {
+        this.network.lobby.unsubscribeFromAll();
+
+        this.scene.start(sceneName, sceneData);
+    }
+
+    _formatLobbyCodeString(code) {
+        return `Code: ${code}`;
     }
 }

@@ -74,7 +74,7 @@ class LobbyMembership {
         const playerUnusedLobbies = Array.from(this.lobbies.entries())
             .filter(([_, lobby]) => lobby.isEmpty() && lobby.hostId === playerId)
             .map(([code, _]) => code);
-        
+
         playerUnusedLobbies.forEach((code) => this.deleteLobby(code));
     }
 
@@ -113,8 +113,7 @@ class Lobby {
         this.lastPlayerNumber = 1;
         this.game = new GameTracker();
 
-        this.waitingToStartGame = new AcknowledgementTracker();
-        this.waitingToReturnToLobby = new AcknowledgementTracker();
+        this.playerAcknowledgement = null;
     }
 
     addMember(playerId) {
@@ -162,6 +161,19 @@ class Lobby {
         }
     }
 
+    resetPlayerAcknowledgements() {
+        const playerIds = this.members.map(m => m.playerId);
+        this.playerAcknowledgement = new AcknowledgementTracker(playerIds);
+    }
+
+    markAsAcknowlegded(playerId) {
+        this.playerAcknowledgement.markAsAcknowledged(playerId);
+    }
+
+    allPlayersReady() {
+        return this.playerAcknowledgement.allAcknowledged();
+    }
+
     isEmpty() {
         return this.members.length === 0;
     }
@@ -207,16 +219,16 @@ class LobbyMember {
 class AcknowledgementTracker {
 
     constructor(expectedIds){
-        this.reset(expectedIds);
-    }
-
-    reset(expectedIds) {
         this.expected = expectedIds;
         this.received = [];
     }
 
     markAsAcknowledged(id) {
         this.received.push(id);
+    }
+
+    allAcknowledged() {
+        return this.expected.length === this.received.length;
     }
 }
 

@@ -5,17 +5,6 @@ const Channels = {
     // lobbyCode: string
     JOIN_LOBBY: 'join-lobby',
 
-    // {
-    // success: bool,
-    // lobbyCode: string
-    // }
-    LOBBY_CREATED: 'lobby-created',
-
-    // {
-    // success: bool
-    // }
-    LOBBY_JOINED: 'lobby-joined',
-
     // client to server
     // {
     //     command: 'ack-join' | 'leave-lobby' | 'start-game'
@@ -37,54 +26,48 @@ const Channels = {
     SIM_COMMANDS: 'sim-commands',
 };
 
-const LobbyUpdates = {
-    NEW_STATE: 'new-state',
-    GAME_STARTING: 'game-starting',
+const LobbyCommands = {
+    LEAVE_LOBBY: 'leave-lobby',
+    UPDATE_LOBBY_MEMBER: 'update-lobby-member',
 
-    createNewState: (lobbyState) => createMessage(LobbyUpdates.NEW_STATE, {
-        state: lobbyState
-    }),
+    createLeaveLobby: () => createMessage(LobbyCommands.LEAVE_LOBBY),
+    createUpdateLobbyMember: (playerCustomization) => createMessage(LobbyCommands.UPDATE_LOBBY_MEMBER, {
+        updatedPlayerCustomization: playerCustomization
+    })
+};
+
+const GameCommands = {
+    START_GAME: 'start-game',
+    CLIENT_READY: 'client-ready',
+    ON_SCOREBOARD: 'on-scoreboard',
+    RETURN_TO_LOBBY: 'return-to-lobby',
+
+    createStartGame: () => createMessage(GameCommands.START_GAME),
+    createClientReady: () => createMessage(GameCommands.CLIENT_READY),
+    createOnScoreboard: () => createMessage(GameCommands.ON_SCOREBOARD),
+    createReturnToLobby: () => createMessage(GameCommands.RETURN_TO_LOBBY)
+}
+
+const GameUpdates = {
+    GAME_STARTING: 'game-starting',
+    GAME_OVER: 'game-over',
+    RETURNING_TO_LOBBY: 'returning-to-lobby',
 
     // walls: [{ x,y,w,h,angle }]
     // players: [{ id,hp,x,y,angle,r,color,name }]
-    createGameStarting: (walls, players) => createMessage(LobbyUpdates.GAME_STARTING, {
+    createGameStarting: (walls, players) => createMessage(GameUpdates.GAME_STARTING, {
         initialState: {
             walls,
             players
         }
-    })
-}
-
-const LobbyCommands = {
-    ACK_JOIN: 'ack-join',
-    LEAVE_LOBBY: 'leave-lobby',
-    UPDATE_LOBBY_MEMBER: 'update-lobby-member',
-    START_GAME: 'start-game',
-
-    createAckJoin: () => createMessage(LobbyCommands.ACK_JOIN),
-    createLeaveLobby: () => createMessage(LobbyCommands.LEAVE_LOBBY),
-    createUpdateLobbyMember: (playerCustomization) => createMessage(LobbyCommands.UPDATE_LOBBY_MEMBER, {
-        updatedPlayerCustomization: playerCustomization
     }),
-    createStartGame: () => createMessage(LobbyCommands.START_GAME)
-};
-
-const GameCommands = {
-    CLIENT_READY: 'client-ready',
-    ACK_GAME_OVER: 'ack-game-over',
-
-    createClientReady: () => createMessage(GameCommands.CLIENT_READY),
-    createAckGameOver: () => createMessage(GameCommands.ACK_GAME_OVER)
-}
-
-const GameUpdates = {
-    GAME_OVER: 'game-over',
 
     // playerScoreOrder: [ playerGameId ] in order of last eliminated to first eliminated
-    createGameOver: (hostId, playerScoreOrder) => createMessage(GameUpdates.GAME_OVER, {
-        hostId: hostId,
+    createGameOver: (playerScoreOrder) => createMessage(GameUpdates.GAME_OVER, {
         scoreboard: playerScoreOrder
-    })
+    }),
+
+    createReturningToLobby: () => createMessage(GameUpdates.RETURNING_TO_LOBBY)
 }
 
 const SimCommands = {
@@ -137,7 +120,6 @@ function addBitmaskOnCondition(condition, bitmask) {
 exports.Messaging = {
     Channels,
     LobbyCommands,
-    LobbyUpdates,
     GameCommands,
     GameUpdates,
     SimCommands

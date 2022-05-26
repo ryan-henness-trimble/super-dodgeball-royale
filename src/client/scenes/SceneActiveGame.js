@@ -8,42 +8,22 @@ class SceneActiveGame extends Phaser.Scene {
 
     create({ network, initialState }) {
         this.network = network;
-
-        this.add.text(20, 20, 'Active Game');
-
-        this.renderInitialGameState(initialState);
-
-        this.registerInputKeys();
-
         this.lastSimUpdate = null;
 
-        const gameOverHandler = (gameOverMessage) => {
-            console.log(gameOverMessage);
-            // const scoreboard = gameOverMessage.scoreboard.map(playerId => {
-            //     const player = this.playersById.get(playerId);
+        this.add.text(20, 20, 'Active Game');
+        this.add.text(20, 60, 'Waiting for players');
 
-            //     return {
-            //         name: player.name,
-            //         color: player.color
-            //     };
-            // });
+        this.registerInputKeys();
+        this.renderInitialGameState(initialState);
 
-            // this.scene.start('scoreboard', {
-            //     network: this.network,
-            //     hostId: gameOverMessage.hostId,
-            //     scoreboard
-            // });
-        }
-
-        this.network.subscribeToActiveGame(
-            gameOverHandler,
-            (newState) => {
-                this.lastSimUpdate = newState;
-            });
+        this.network.lobby.subscribeToGameUpdates(this.handleGameUpdate.bind(this));
+        this.network.lobby.subscribeToSimUpdates((simState) => {
+            this.lastSimUpdate = simState;
+        });
 
         this.updateFn = this.waitForSimUpdates.bind(this);
 
-        this.network.sendGameCommand(SDRGame.Messaging.GameCommands.createClientReady());
+        this.network.lobby.sendGameCommand(SDRGame.Messaging.GameCommands.createClientReady());
     }
 
     update() {
@@ -68,7 +48,7 @@ class SceneActiveGame extends Phaser.Scene {
             cw: this.keyD.isDown,
             ccw: this.keyA.isDown
         };
-        this.network.sendSimCommand(inputs);
+        this.network.lobby.sendSimCommand(inputs);
     }
 
     renderInitialGameState(arena) {
@@ -97,8 +77,6 @@ class SceneActiveGame extends Phaser.Scene {
 
             this.playersById.set(p.id, player);
         });
-
-        this.add.circle(30, 60, 15, 0xdd2222);
 
         this.ballsById = new Map();
 
@@ -147,6 +125,27 @@ class SceneActiveGame extends Phaser.Scene {
         this.eventHistory.label.setText(nextEvents.join('\n'));
     }
 
+    handleGameUpdate(msg) {
+        switch (msg.type) {
+            case SDRGame.Messaging.GameUpdates.GAME_OVER:
+                const scoreboard = msg.scoreboard.map(playerId => {
+                    const player = this.playersById.get(playerId);
+                    return {
+                        name: player.name,
+                        color: player.color
+                    };
+                });
+
+                this._startNewScene('scoreboard', {
+                    network: this.network,
+                    scoreboard
+                });
+                break;
+            default:
+                break;
+        }
+    }
+
     formatEventAsString(evt) {
         switch (evt.type) {
             case SDRGame.gameevents.ROUND_OVER:
@@ -162,5 +161,11 @@ class SceneActiveGame extends Phaser.Scene {
 
     formatHPLabelString(playerName, hp) {
         return `${playerName} HP: ${hp}`;
+    }
+
+    _startNewScene(sceneName, sceneData) {
+        this.network.lobby.unsubscribeFromAll();
+
+        this.scene.start(sceneName, sceneData);
     }
 }

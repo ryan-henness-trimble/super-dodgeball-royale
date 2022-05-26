@@ -12,7 +12,6 @@ class GameServer {
     }
 
     // TODO consider adding a timeout to socket emits for the simulation and commands
-    // TODO consider using the acknowledgement callback for creating/joining server
 
     startListening() {
         this.io = new Server({
@@ -37,6 +36,7 @@ class GameServer {
         socket.on(Messaging.Channels.CREATE_LOBBY, (callback) => {
             console.log('create lobby requested');
 
+            this.removePlayerFromAllLobbies(socket.id);
             const lobbyCode = this.lobbies.createLobby(socket.id);
 
             callback({
@@ -45,16 +45,19 @@ class GameServer {
             });
         });
 
-        socket.on(Messaging.Channels.JOIN_LOBBY, (lobbyCode) => {
-            if (this.lobbies.lobbyExists(lobbyCode)) {
-                this.lobbies.addPlayerToLobby(socket.id, lobbyCode);
-
-                socket.join(lobbyCode);
-
-                socket.emit(Messaging.Channels.LOBBY_JOINED, { success: true });
-            } else {
-                socket.emit(Messaging.Channels.LOBBY_JOINED, { success: false });
+        socket.on(Messaging.Channels.JOIN_LOBBY, (lobbyCode, callback) => {
+            if (this.lobbies.playerIsInALobby(socket.id) || !this.lobbies.lobbyExists(lobbyCode)) {
+                callback({ success: false });
+                return;
             }
+
+            this.lobbies.addPlayerToLobby(socket.id, lobbyCode);
+            socket.join(lobbyCode);
+
+            let lobbyState = this.lobbies.getLobbyState(lobbyCode);
+            this.broadcastLobbyUpdate(lobbyCode, lobbyState);
+
+            callback({ success: true });
         });
 
         socket.on(Messaging.Channels.LOBBY_COMMANDS, (msg) => {
@@ -66,45 +69,44 @@ class GameServer {
         })
 
         socket.on(Messaging.Channels.SIM_COMMANDS, (msg) => {
-            const lobby = this.lobbies.getLobbyByPlayer(socket.id);
-            const command = Messaging.SimCommands.fromNetworkFormat(msg);
-            lobby.game.receiveCommand(socket.id, command);
+            if (this.lobbies.playerIsInALobby(socket.id)) {
+                const lobby = this.lobbies.getLobbyByPlayer(socket.id);
+                const command = Messaging.SimCommands.fromNetworkFormat(msg);
+                lobby.game.receiveCommand(socket.id, command);
+            }
         });
 
         socket.on('disconnect', () => {
             console.log('player disconnected');
 
-            this.lobbies.removeUnusedLobbiesHostedByPlayer(socket.id);
-
-            // TODO centralize logic for cleaning up from a player leaving
-            if (this.lobbies.playerIsInALobby(socket.id)) {
-                const lobby = this.lobbies.getLobbyStateByPlayer(socket.id);
-                this.lobbies.removePlayerFromLobby(socket.id, lobby.code);
-
-                if (this.lobbies.lobbyExists(lobby.code)) {
-                    const newState = this.lobbies.getLobbyState(lobby.code);
-                    const msg = Messaging.LobbyUpdates.createNewState(newState);
-                    this.broadcastLobbyUpdate(lobby.code, msg);
-                }
-            }
+            this.removePlayerFromAllLobbies(socket.id);
         });
+    }
+
+    removePlayerFromAllLobbies(playerId) {
+        this.lobbies.removeUnusedLobbiesHostedByPlayer(playerId);
+
+        if (this.lobbies.playerIsInALobby(playerId)) {
+            const lobby = this.lobbies.getLobbyStateByPlayer(playerId);
+            this.lobbies.removePlayerFromLobby(playerId, lobby.code);
+
+            if (this.lobbies.lobbyExists(lobby.code)) {
+                const newState = this.lobbies.getLobbyState(lobby.code);
+                this.broadcastLobbyUpdate(lobby.code, newState);
+            }
+        }
     }
 
     handleLobbyCommand(socket, msg) {
         const playerId = socket.id;
         switch (msg.type) {
-            case Messaging.LobbyCommands.ACK_JOIN:
-                let lobby = this.lobbies.getLobbyStateByPlayer(playerId);
-                const newLobbyState = Messaging.LobbyUpdates.createNewState(lobby);
-                this.broadcastLobbyUpdate(lobby.code, newLobbyState);
-                break;
             case Messaging.LobbyCommands.LEAVE_LOBBY:
+                this.removePlayerFromAllLobbies(socket.id);
                 break;
             case Messaging.LobbyCommands.UPDATE_LOBBY_MEMBER:
                 this.handleUpdateLobbyMember(playerId, msg.updatedPlayerCustomization);
                 break;
-            case Messaging.LobbyCommands.START_GAME:
-                this.handleStartGameCommand(playerId);
+            default:
                 break;
         }
     }
@@ -112,10 +114,19 @@ class GameServer {
     handleGameCommand(socket, msg) {
         const playerId = socket.id;
         switch (msg.type) {
+            case Messaging.GameCommands.START_GAME:
+                this.handleStartGameCommand(playerId);
+                break;
             case Messaging.GameCommands.CLIENT_READY:
                 this.handlePlayerReadyCommand(playerId);
                 break;
-            case Messaging.GameCommands.ACK_GAME_OVER:
+            case Messaging.GameCommands.ON_SCOREBOARD:
+                this.handlePlayerOnScoreboard(playerId);
+                break;
+            case Messaging.GameCommands.RETURN_TO_LOBBY:
+                this.handleReturnToLobby(playerId);
+                break;
+            default:
                 break;
         }
     }
@@ -125,9 +136,8 @@ class GameServer {
         const updateApplied = this.lobbies.updateLobbyByPlayer(playerId, playerCustomization);
         if (updateApplied)
         {
-            let updatedLobby = this.lobbies.getLobbyStateByPlayer(playerId);
-            const updatedLobbyState = Messaging.LobbyUpdates.createNewState(updatedLobby);
-            this.broadcastLobbyUpdate(updatedLobby.code, updatedLobbyState);
+            const updatedLobby = this.lobbies.getLobbyStateByPlayer(playerId);
+            this.broadcastLobbyUpdate(updatedLobby.code, updatedLobby);
         }
     }
 
@@ -137,16 +147,37 @@ class GameServer {
         }
 
         const lobby = this.lobbies.getLobbyByPlayer(playerId);
+        if (lobby.hostId !== playerId) {
+            return;
+        }
 
+        lobby.resetPlayerAcknowledgements();
         const initialState = lobby.setUpNewGame();
 
-        const msg = Messaging.LobbyUpdates.createGameStarting(initialState.walls, initialState.players);
-        this.broadcastLobbyUpdate(lobby.code, msg);
+        const msg = Messaging.GameUpdates.createGameStarting(initialState.walls, initialState.players);
+        this.broadcastGameUpdate(lobby.code, msg);
     }
 
-    handleAckGameOver(playerId) {
+    handlePlayerOnScoreboard(playerId) {
         if (!this.lobbies.playerIsInALobby(playerId)) {
             return;
+        }
+
+        const lobby = this.lobbies.getLobbyByPlayer(playerId);
+        lobby.markAsAcknowlegded(playerId);
+    }
+
+    handleReturnToLobby(playerId) {
+        if (!this.lobbies.playerIsInALobby(playerId)) {
+            return;
+        }
+
+        const lobby = this.lobbies.getLobbyByPlayer(playerId);
+        if (lobby.allPlayersReady()) {
+            lobby.resetPlayerAcknowledgements();
+
+            const msg = Messaging.GameUpdates.createReturningToLobby();
+            this.broadcastGameUpdate(lobby.code, msg);
         }
     }
 
@@ -157,16 +188,16 @@ class GameServer {
 
         const lobby = this.lobbies.getLobbyByPlayer(playerId);
 
-        lobby.game.markPlayerAsReady(playerId);
+        lobby.markAsAcknowlegded(playerId);
 
-        if (lobby.game.allPlayersReady()) {
-            console.log('starting loop');
-
+        if (lobby.allPlayersReady()) {
             const gameStateDelivery = (renderState) => {
                 this.broadcastSimUpdate(lobby.code, renderState);
             };
             const gameOverCallback= (scoreboardOrder) => {
-                const gameOverMessage = Messaging.GameUpdates.createGameOver(lobby.hostId, scoreboardOrder);
+                lobby.resetPlayerAcknowledgements();
+
+                const gameOverMessage = Messaging.GameUpdates.createGameOver(scoreboardOrder);
                 this.broadcastGameUpdate(lobby.code, gameOverMessage);
             };
 
