@@ -2,11 +2,6 @@
 
 ## Priority
 
-- Ryan: Host the game as it is and try playing it
-  - need to move hardcoded settings process variables or env
-  - hardcoded settings:
-    - server url (SceneMain.js)
-    - cors and server port (testserver.js)
 - Ryan: maps
   - have more maps
   - be able to choose map from lobby
@@ -17,6 +12,8 @@
 Difficulty: 1-5 (5 highest)
 Value: 1-5
 
+- Bug: if a player picks some colors, then other players become unable to pick certain colors that should be available
+  - repro: create a lobby with 2 players. pick some colors as player 1, then try picking each color as player 2. Player 2 should be unable to pick certain colors. repro should also be the same if player 2 picks colors first, then player 1 will be unable to pick certain colors.
 - show when, where, what direction the next ball is spawning (3 D, 3 V)
 - make it easier to join a lobby (3 D, 2 V)
   - option: shorter/simpler string of characters
@@ -25,11 +22,14 @@ Value: 1-5
 - implement powerups/upgrades in the game (5 D, 5 V)
 - Possible add images for player icon/shield (5 D, 2 V)
 - try implement entity interpolation in the client and lower the server broadcast rate to 20 Hz (3 D, 2 V)
+- don't allow starting a game with only one player in the lobby (1 D, 2 V)
+- balls can spawn in different places (1 D, 3 V) (probably would want to be able to see where balls are spawning first)
 
 ## Polish
 
 ** Changes would be well isolated
 
+- **tighten cors settings instead of allowing all
 - **make home scene look nice
   - maybe also show what the controls are for playing the game
 - **make game screen (when the game is playing) look nice

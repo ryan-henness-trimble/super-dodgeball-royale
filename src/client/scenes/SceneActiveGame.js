@@ -133,7 +133,7 @@ class SceneActiveGame extends Phaser.Scene {
         switch (msg.type) {
             case SDRGame.Messaging.GameUpdates.GAME_OVER:
                 this.infoLabel.setText('Game Over');
-                setTimeout(() => this._transitionToScoreboard(msg.scoreboard), 5000);
+                setTimeout(() => this._transitionToScoreboard(msg.scoreboard), 3000);
                 break;
             default:
                 break;

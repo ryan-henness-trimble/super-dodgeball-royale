@@ -361,7 +361,7 @@ function makePlayer(x, y) {
     const player = Body.create({
         parts: [hitbox, shield],
         collisionFilter: {
-            group: GRP_PLAYER,
+            group: GRP_WORLD,
             category: PLAYER_CATEGORY,
             mask: PLAYER_MASK
         }
