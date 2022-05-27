@@ -30,7 +30,7 @@ class PlayerCustomizationManager {
     {
         if (this.isCustomizationValid(lobbyMemberObject))
         {
-            this.playerCustomizations.set(lobbyMemberObject.playerId, new PlayerCustomization(lobbyMemberObject));
+            this.playerCustomizations.set(lobbyMemberObject.playerId, new PlayerCustomization().initializeFromObject(lobbyMemberObject));
             this.replaceExistingMapping.call(this, this.playerNames, lobbyMemberObject.name, lobbyMemberObject.playerId, false);
             this.replaceExistingMapping.call(this, this.playerColors, lobbyMemberObject.playerColor, lobbyMemberObject.playerId, true);
             this.replaceExistingMapping.call(this, this.shieldColors, lobbyMemberObject.shieldColor, lobbyMemberObject.playerId, true);
@@ -114,7 +114,7 @@ class PlayerCustomizationManager {
 
     replaceExistingMapping(mapObject, newKey, playerId, nullOutOldValue)
     {
-        this.removeExistingMapping(mapObject, playerId, nullOutOldValue);
+        this.removeExistingMapping.call(this, mapObject, playerId, nullOutOldValue);
         mapObject.set(newKey, playerId);
     }
 
@@ -126,8 +126,8 @@ class PlayerCustomizationManager {
 
     getMappingByValue(mapObject, value)
     {
-        const values = [...mapObject.values()];
-        const matchingKeyValue = values.find(v => v === value);
+        const keyValuePairs = [...mapObject.entries()];
+        const matchingKeyValue = keyValuePairs.find(v => v[1] === value);
         if (matchingKeyValue !== undefined)
         {
             return {
@@ -151,6 +151,14 @@ class PlayerCustomization
         this.name = "NO CUSTOM NAME";
         this.playerColor = "NO CUSTOM PLAYER COLOR";
         this.shieldColor = "NO CUSTOM SHIELD COLOR"
+    }
+
+    initializeFromObject(lobbyMemberObject)
+    {
+        this.name = lobbyMemberObject.name;
+        this.playerColor = lobbyMemberObject.playerColor;
+        this.shieldColor = lobbyMemberObject.shieldColor;
+        return this;
     }
 }
 

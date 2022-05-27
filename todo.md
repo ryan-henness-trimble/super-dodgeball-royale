@@ -12,8 +12,6 @@
 Difficulty: 1-5 (5 highest)
 Value: 1-5
 
-- Bug: if a player picks some colors, then other players become unable to pick certain colors that should be available
-  - repro: create a lobby with 2 players. pick some colors as player 1, then try picking each color as player 2. Player 2 should be unable to pick certain colors. repro should also be the same if player 2 picks colors first, then player 1 will be unable to pick certain colors.
 - show when, where, what direction the next ball is spawning (3 D, 3 V)
 - make it easier to join a lobby (3 D, 2 V)
   - option: shorter/simpler string of characters
