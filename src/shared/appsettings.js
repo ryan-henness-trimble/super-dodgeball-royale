@@ -9,7 +9,7 @@ const localSettings = {
 
 const deployedSettings = {
     serverConnectionUrl: 'wss://super-dodgeball-royale-server.herokuapp.com',
-    serverCorsOrigins: ['*']
+    serverCorsOrigins: ['https://super-dodgeball-royale.herokuapp.com']
 };
 
 const Configuration = USE_LOCAL_SETTINGS ? localSettings : deployedSettings;
