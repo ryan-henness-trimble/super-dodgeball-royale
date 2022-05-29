@@ -13,10 +13,6 @@ Difficulty: 1-5 (5 highest)
 Value: 1-5
 
 - show when, where, what direction the next ball is spawning (3 D, 3 V)
-- make it easier to join a lobby (3 D, 2 V)
-  - option: shorter/simpler string of characters
-  - option: add a button that copies the code to clipboard
-  - option: inject html into phaser window (maybe possible)?
 - implement powerups/upgrades in the game (5 D, 5 V)
 - Possible add images for player icon/shield (5 D, 2 V)
 - try implement entity interpolation in the client and lower the server broadcast rate to 20 Hz (3 D, 2 V)
