@@ -9,7 +9,7 @@ class SceneLobby extends Phaser.Scene {
 
     preload ()
     {
-        this.load.html('playerInputForm', '../htmlAssets/playerNameInput.html');
+        this.load.html('playerInputForm', '../assets/html/playerNameInput.html');
     }
 
     create({ network }) {
@@ -28,7 +28,10 @@ class SceneLobby extends Phaser.Scene {
         this.add.text(20, 20, 'Lobby');
 
         this.codeLabel = this.add.text(20, 50, 'Code:')
-        this.playersLabel = this.add.text(20, 80, 'Players:');
+        this.copyCodeButton = this.createButtonObject(107.5, 100, "Copy Lobby Code", () => {
+            navigator.clipboard.writeText(this.network.lobby.lobbyState.code);
+        })
+        this.playersLabel = this.add.text(20, 130, 'Players:');
 
         this.playerGraphicsList = [];
 
@@ -77,7 +80,7 @@ class SceneLobby extends Phaser.Scene {
                 playerObjects.push(hostIndicator);
             }
 
-            const container = this.add.container(40, 130 + 50 * i, playerObjects);
+            const container = this.add.container(40, 180 + 50 * i, playerObjects);
 
             this.playerGraphicsList.push(container);
         });
