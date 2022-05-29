@@ -9,7 +9,7 @@ class SceneLobby extends Phaser.Scene {
 
     preload ()
     {
-        this.load.html('playerInputForm', '../htmlAssets/playerNameInput.html');
+        this.load.html('playerInputForm', '../assets/html/playerNameInput.html');
     }
 
     create({ network }) {
