@@ -13,9 +13,6 @@ const Composite = Matter.Composite;
 // walls 100 thickness, 700 length
 // arena offset from window: 290,10
 
-// +290 +10
-// 350, -50, 700, 100
-
 const GRP_WORLD = 1;
 const GRP_PLAYER = 0;
 
@@ -28,14 +25,20 @@ const PLAYER_CATEGORY = 0x000000002;
 const WORLD_MASK = PLAYER_CATEGORY;
 const PLAYER_MASK = WORLD_CATEGORY;
 
-const PLAYER_VELOCITY = 2.5;
-const SHIELD_ANGULAR_VELOCITY = 0.075;
+const PLAYER_VELOCITY = 4.0;
+const SHIELD_ANGULAR_VELOCITY = 0.1;
 const INITIAL_HP = 3;
 const IFRAME_DURATION_ON_HIT = 2000;
 
-// 3 is a good speed to keep the balls at permanently
-// slow enough to be able to process, but fast enough to be challenging when there are a lot of them
-const BALL_SPEED = 3.25;
+const BALL_BASE_SPEED = 3.0;
+const BALL_BOOSTED_SPEED = 9.0;
+
+const BODY_TYPE = Object.freeze({
+    WALL: 0,
+    PLAYER_HITBOX: 1,
+    PLAYER_SHIELD: 2,
+    BALL: 3
+});
 
 // TODO maybe want to use large simulation units, then scale down for rendering
 // e.g. player radius = 40, ball radius = 30, render scale 0.5
@@ -48,10 +51,10 @@ class Simulation {
         this.ballSpawnPoint = null;
 
         this.engine = null;
+
         this.playersById = new Map();
         this.ballsById = new Map();
-
-        this.hitboxIdsToPlayerIds = new Map();
+        this.idToBodyType = new Map();
 
         this.playersHit = [];
         this.playersToEliminate = [];
@@ -74,19 +77,22 @@ class Simulation {
 
         this.playersById.clear();
         this.ballsById.clear();
+        this.idToBodyType.clear();
+
         this.playersHit = [];
         this.playersToEliminate = [];
         this.iframePlayers = [];
         this.stepEvents = [];
-
         this.playerEliminationOrder = [];
 
         const wallBodies = gameMap.walls.map(w => makeWall(w.x, w.y, w.w, w.h, w.angle));
+        wallBodies.forEach(w => this.idToBodyType.set(w.id, BODY_TYPE.WALL));
 
         const players = gameMap.playerSpawns.slice(0, numberOfPlayers).map(p => makePlayer(p.x, p.y));
         players.forEach(p => {
             this.playersById.set(p.id, p);
-            this.hitboxIdsToPlayerIds.set(p.hitboxId, p.id);
+            this.idToBodyType.set(p.hitboxId, BODY_TYPE.PLAYER_HITBOX);
+            this.idToBodyType.set(p.shieldId, BODY_TYPE.PLAYER_SHIELD);
         });
 
         this.engine = Engine.create();
@@ -189,54 +195,56 @@ class Simulation {
     }
 
     handleCollisions(evt) {
-        // if ball is colliding, always keep velocity up
-        // if player hitbox and ball, subtract health
-
         evt.pairs.forEach(p => {
-            this.ensureBallKeepsMoving(p.bodyA);
-            this.ensureBallKeepsMoving(p.bodyB);
+            const collisionInfo = this.identifyCollidedBodies(p.bodyA, p.bodyB);
 
-            const hitCheck = this.playerWasHitByBall(p.bodyA, p.bodyB)
-            if (hitCheck.hit) {
-                const playerId = this.hitboxIdsToPlayerIds.get(hitCheck.playerHitbox.id);
-                this.playersHit.push(this.playersById.get(playerId));
+            if (collisionInfo.singleBallCollision) {
+                const otherType = this.idToBodyType.get(collisionInfo.other.id);
+
+                switch (otherType) {
+                    case BODY_TYPE.WALL:
+                        this.setBallSpeed(collisionInfo.ball, BALL_BASE_SPEED);
+                        break;
+                    case BODY_TYPE.PLAYER_HITBOX:
+                        const playerId = collisionInfo.other.parent.id;
+                        this.playersHit.push(this.playersById.get(playerId));
+                        break;
+                    case BODY_TYPE.PLAYER_SHIELD:
+                        this.setBallSpeed(collisionInfo.ball, BALL_BOOSTED_SPEED);
+                        break;
+                }
             }
         });
     }
 
-    ensureBallKeepsMoving(ballBody) {
-        if (!this.ballsById.has(ballBody.id)) {
-            return;
-        }
-
-        if(ballBody.speed != 0) {
-            let speedMultiplier = BALL_SPEED / ballBody.speed;
-            const velocity = {
-                x: ballBody.velocity.x * speedMultiplier,
-                y: ballBody.velocity.y * speedMultiplier
-            };
-
-            Body.setVelocity(ballBody, velocity);
-        }
-    }
-
-    playerWasHitByBall(bodyA, bodyB) {
+    identifyCollidedBodies(bodyA, bodyB) {
         const bodies = [bodyA, bodyB];
 
-        const balls = bodies.filter(b => this.ballsById.has(b.id));
-        const players = bodies.filter(b => this.hitboxIdsToPlayerIds.has(b.id));
+        const balls = bodies.filter(b => this.idToBodyType.get(b.id) === BODY_TYPE.BALL);
 
-        if (balls.length === 1 && players.length === 1) {
+        if (balls.length === 1) {
             return {
-                hit: true,
+                singleBallCollision: true,
                 ball: balls[0],
-                playerHitbox: players[0]
+                other: balls[0].id === bodyA.id ? bodyB : bodyA
             };
         } else {
             return {
-                hit: false
+                singleBallCollision: false
             };
         }
+    }
+
+    setBallSpeed(ballBody, speed) {
+        const currentSpeed = Math.max(ballBody.speed, 0.1);
+        
+        const speedMultiplier = speed / currentSpeed;
+        const velocity = {
+            x: ballBody.velocity.x * speedMultiplier,
+            y: ballBody.velocity.y * speedMultiplier
+        };
+
+        Body.setVelocity(ballBody, velocity);
     }
 
     resolveHits() {
@@ -301,8 +309,8 @@ class Simulation {
 
     spawnBall(spawnPoint, world) {
         const angle = 2 * Math.PI * Math.random();
-        const xVel = BALL_SPEED * Math.cos(angle);
-        const yVel = BALL_SPEED * Math.sin(angle);
+        const xVel = BALL_BASE_SPEED * Math.cos(angle);
+        const yVel = BALL_BASE_SPEED * Math.sin(angle);
 
         const body = makeBall(spawnPoint.x, spawnPoint.y);
         Body.setVelocity(body, { x: xVel, y: yVel });
@@ -310,7 +318,8 @@ class Simulation {
             id: body.id,
             body: body
         };
-    
+
+        this.idToBodyType.set(ball.id, BODY_TYPE.BALL);
         this.ballsById.set(ball.id, ball);
     
         Composite.add(world, body);
@@ -324,8 +333,10 @@ class Simulation {
 class BallSpawnTiming {
 
     constructor() {
-        this.INTERVAL_TIMING_MS = 2000;
-        this.nextSpawnTimingMs = this.INTERVAL_TIMING_MS;
+        this.INTERVAL_TIMING_MS = 5000;
+
+        // First ball spawn should always be quick
+        this.nextSpawnTimingMs = 2000;
     }
 
     timeUntilNextSpawn() {
@@ -370,6 +381,7 @@ function makePlayer(x, y) {
     return {
         id: player.id,
         hitboxId: hitbox.id,
+        shieldId: shield.id,
         iframeDuration: 0,
         body: player,
         hp: INITIAL_HP,
