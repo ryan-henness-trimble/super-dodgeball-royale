@@ -4,13 +4,17 @@ class SceneScoreboard extends Phaser.Scene {
         super('scoreboard');
     }
 
-    preload() { }
+    preload() {
+        this.load.audio('airhorn', ['assets/audio/airhorn.mp3']);
+    }
 
     create({ network, scoreboard }) {
         this.network = network;
 
+        this.airhorn = this.sound.add('airhorn', { loop: false });
+
         this.add.text(100,100, 'Scoreboard');
-        
+
         scoreboard.forEach((p, i) => {
             const playerBall = this.add.circle(40, 0, SDRGame.GameConstants.PLAYER_HITBOX_RADIUS, p.color);
             const playerLabel = this.add.text(80, -10, this._formatNameWithRank(p.name, i+1));
@@ -21,6 +25,7 @@ class SceneScoreboard extends Phaser.Scene {
         });
 
         if (this.network.lobby.playerId === this.network.lobby.lobbyState.host) {
+            this.airhorn.play();
             this.createLobbyReturnButton();
         } else {
             this.add.text(400, 100, 'Waiting for host to choose next action');
