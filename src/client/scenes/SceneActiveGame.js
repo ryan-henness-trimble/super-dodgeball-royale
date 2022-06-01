@@ -104,10 +104,12 @@ class SceneActiveGame extends Phaser.Scene {
             player.hpLabel.setText(this.formatHPLabelString(player.name, p.hp));
 
             if (p.isEliminated) {
-                player.hitboxGraphic.setFillStyle(0x000000);
+                player.graphic.setAlpha(0);
             } else if (p.hasIFrames) {
-                player.hitboxGraphic.setFillStyle(0xbb0000);
+                const toggle = Math.floor(p.iframeDuration / 100) % 2
+                player.graphic.setAlpha(toggle);
             } else {
+                player.graphic.setAlpha(1);
                 player.hitboxGraphic.setFillStyle(player.playerColor);
             }
         });
