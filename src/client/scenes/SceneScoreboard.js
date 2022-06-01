@@ -53,7 +53,13 @@ class SceneScoreboard extends Phaser.Scene {
 
     createLobbyReturnButton() {
         const btnBack = this.add.rectangle(0, 0, 200, 40, 0x109ce8)
-            .setInteractive()
+            .setInteractive({ cursor: 'pointer' })
+            .on('pointerover', () => {
+                btnBack.setFillStyle(0x4fb9f3);
+            })
+            .on('pointerout', () => {
+                btnBack.setFillStyle(0x109ce8);
+            })
             .on('pointerdown', () => {
                 const msg = SDRGame.Messaging.GameCommands.createReturnToLobby();
                 this.network.lobby.sendGameCommand(msg);

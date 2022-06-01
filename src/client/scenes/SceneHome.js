@@ -6,7 +6,7 @@ class SceneHome extends Phaser.Scene {
         this.GameConstants = SDRGame.GameConstants;
     }
 
-    preload() { 
+    preload() {
         this.load.image('background', '../assets/img/bg.png');
         this.load.image('title', '../assets/img/title.png');
         this.load.html('lobbyCodeInput', '../assets/html/lobbyCodeInput.html');
@@ -62,9 +62,15 @@ class SceneHome extends Phaser.Scene {
         const btnText = this.add.text(0, 0, label);
         btnText.setOrigin(0.5, 0.5);
         const btnBack = this.add.rectangle(0, 0, btnText.width + 30, 40, 0x109ce8)
-            .setInteractive()
+            .setInteractive({ cursor: 'pointer' })
+            .on('pointerover', () => {
+                btnBack.setFillStyle(0x4fb9f3);
+            })
+            .on('pointerout', () => {
+                btnBack.setFillStyle(0x109ce8);
+            })
             .on('pointerdown', onClick);
-        
+
         return this.add.container(x, y, [btnBack, btnText]);
     }
 }

@@ -84,7 +84,7 @@ class SceneLobby extends Phaser.Scene {
 
             this.playerGraphicsList.push(container);
         });
-        
+
         this.createPlayerNameInput(lobbyState, 600, 200);
         this.createColorPicker(lobbyState, "Select Player Color:", "playerColor", 600, 300);
         this.createColorPicker(lobbyState, "Select Shield Color:", "shieldColor", 600, 450);
@@ -98,9 +98,9 @@ class SceneLobby extends Phaser.Scene {
 
     /**
      * Create color picker options
-     * @param {Lobby} lobbyState                Lobby object with informatio 
+     * @param {Lobby} lobbyState                Lobby object with informatio
      * @param {string} pickerTitle              Title to be displayed above color picker
-     * @param {string} playerPropertyToUpdate   Property of player updated by color options - should be 'playerColor' or 'shieldColor' 
+     * @param {string} playerPropertyToUpdate   Property of player updated by color options - should be 'playerColor' or 'shieldColor'
      * @param {int} containerX                  X coordinate of where picker's containter is placed
      * @param {int} containerY                  Y coordinate of where picker's containter is placed
      */
@@ -129,7 +129,7 @@ class SceneLobby extends Phaser.Scene {
 
                 if (memberUsingColor)
                 {
-                    if (memberUsingColor.id !== currentPlayerState.id) 
+                    if (memberUsingColor.id !== currentPlayerState.id)
                     {
                         colorCircle.setAlpha(0.01);
                     }
@@ -211,9 +211,15 @@ class SceneLobby extends Phaser.Scene {
         const btnText = this.add.text(0, 0, label);
         btnText.setOrigin(0.5, 0.5);
         const btnBack = this.add.rectangle(0, 0, btnText.width + 30, 40, 0x109ce8)
-            .setInteractive()
+            .setInteractive({ cursor: 'pointer' })
+            .on('pointerover', () => {
+                btnBack.setFillStyle(0x4fb9f3);
+            })
+            .on('pointerout', () => {
+                btnBack.setFillStyle(0x109ce8);
+            })
             .on('pointerdown', onClick);
-        
+
         return this.add.container(x, y, [btnBack, btnText]);
     }
 
