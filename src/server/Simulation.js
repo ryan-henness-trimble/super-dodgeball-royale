@@ -170,6 +170,7 @@ class Simulation {
             return {
                 id: id,
                 hp: p.hp,
+                iframeDuration: p.iframeDuration,
                 hasIFrames: p.iframeDuration > 0,
                 isEliminated: p.isEliminated,
                 x: p.body.position.x,

@@ -7,6 +7,7 @@ class PlayerCustomizationManager {
         this.playerNames = new Map();           // key: name        value: playerId using name    
         this.playerColors = new Map();          // key: hexColor    value: playerId using color 
         this.shieldColors = new Map();          // key: playerI     value: playerId using color
+        this.playerEmojis = new Map();          // https://phaser.io/examples/v3/view/game-objects/text/emojis
 
         this.initializeDefaultColors(this.playerColors);
         this.initializeDefaultColors(this.shieldColors);
