@@ -11,7 +11,7 @@ class SceneScoreboard extends Phaser.Scene {
     create({ network, scoreboard }) {
         this.network = network;
 
-        this.airhorn = this.sound.add('airhorn', { loop: false });
+        this.airhorn = this.sound.add('airhorn', { loop: false, volume: 0.2 });
 
         this.add.text(100,100, 'Scoreboard');
 
