@@ -55,10 +55,12 @@ const GameUpdates = {
 
     // walls: [{ x,y,w,h,angle }]
     // players: [{ id,hp,x,y,angle,r,color,name }]
-    createGameStarting: (walls, players) => createMessage(GameUpdates.GAME_STARTING, {
+    // events: array of gameevents objects (should just be NEW_BALL_SPAWN on game start)
+    createGameStarting: (walls, players, events) => createMessage(GameUpdates.GAME_STARTING, {
         initialState: {
             walls,
-            players
+            players,
+            events
         }
     }),
 
