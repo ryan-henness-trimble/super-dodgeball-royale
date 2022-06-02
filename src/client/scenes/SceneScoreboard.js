@@ -34,8 +34,7 @@ class SceneScoreboard extends Phaser.Scene {
 
         this.network.lobby.subscribeToGameUpdates(this.handleGameUpdate.bind(this));
 
-        this.airhorn.play();
-        this.cheer.play();
+        this.playScoreboardSounds();
 
         const msg = SDRGame.Messaging.GameCommands.createOnScoreboard();
         this.network.lobby.sendGameCommand(msg);
@@ -45,6 +44,7 @@ class SceneScoreboard extends Phaser.Scene {
         switch (msg.type) {
             case SDRGame.Messaging.GameUpdates.RETURNING_TO_LOBBY:
                 this.network.lobby.unsubscribeFromAll();
+                this.stopScoreboardSounds();
 
                 this.scene.start('lobby', {
                     network: this.network
@@ -53,6 +53,16 @@ class SceneScoreboard extends Phaser.Scene {
             default:
                 break;
         }
+    }
+
+    playScoreboardSounds() {
+        this.airhorn.play();
+        this.cheer.play();
+    }
+
+    stopScoreboardSounds() {
+        this.airhorn.stop();
+        this.cheer.stop();
     }
 
     createLobbyReturnButton() {

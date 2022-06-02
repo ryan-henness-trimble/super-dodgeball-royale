@@ -62,10 +62,10 @@ class SceneActiveGame extends Phaser.Scene {
 
         // read inputs
         const inputs = {
-            up: this.cursorKeys.up.isDown,
-            down: this.cursorKeys.down.isDown,
-            left: this.cursorKeys.left.isDown,
-            right: this.cursorKeys.right.isDown,
+            up: this.keyUp.isDown,
+            down: this.keyDown.isDown,
+            left: this.keyLeft.isDown,
+            right: this.keyRight.isDown,
             cw: this.keyD.isDown,
             ccw: this.keyA.isDown
         };
@@ -105,11 +105,12 @@ class SceneActiveGame extends Phaser.Scene {
     }
 
     registerInputKeys() {
-        this.cursorKeys = this.input.keyboard.createCursorKeys();
-
-
-        this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
-        this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+        this.keyLeft = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT, false);
+        this.keyRight = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT, false);
+        this.keyUp = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP, false);
+        this.keyDown = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN, false);
+        this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A, false);
+        this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D, false);
     }
 
     renderState(state) {
