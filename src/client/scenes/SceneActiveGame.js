@@ -9,6 +9,7 @@ class SceneActiveGame extends Phaser.Scene {
         this.load.spritesheet('elimination', 'assets/img/elimination.png', {
             frameWidth: 40, frameHeight: 40
         });
+        this.load.audio('elimination_audio', ['assets/audio/elimination.wav']);
     }
 
     create({ network, initialState }) {
@@ -41,6 +42,8 @@ class SceneActiveGame extends Phaser.Scene {
             frameRate: 8,
             repeat: 3
         });
+
+        this.eliminationAudio = this.sound.add('elimination_audio', { loop: false, volume: 0.2 });
     }
 
     update() {
@@ -103,6 +106,7 @@ class SceneActiveGame extends Phaser.Scene {
 
     registerInputKeys() {
         this.cursorKeys = this.input.keyboard.createCursorKeys();
+
 
         this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
         this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
@@ -168,8 +172,10 @@ class SceneActiveGame extends Phaser.Scene {
                     const player = this.playersById.get(e.playerId);
                     this.explosionObject = this.physics.add.sprite(player.graphic.x, player.graphic.y);
                     this.explosionObject.play('elim_anim');
+                    this.eliminationAudio.play();
                     setTimeout(() => {
                         this.explosionObject.destroy();
+                        this.eliminationAudio.stop();
                     }, 1000);
                     break;
                 default:
