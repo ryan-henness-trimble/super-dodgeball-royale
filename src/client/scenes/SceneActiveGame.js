@@ -9,6 +9,8 @@ class SceneActiveGame extends Phaser.Scene {
     create({ network, initialState }) {
         this.network = network;
         this.lastSimUpdate = null;
+        this.nextBallSpawnIndicator = null;
+        this.nextSpawnInformation = null;
 
         this.add.text(20, 20, 'Active Game');
         
@@ -96,6 +98,13 @@ class SceneActiveGame extends Phaser.Scene {
     }
 
     renderState(state) {
+        const nextBallSpawnEvent = state.events.find(e => e.type === SDRGame.gameevents.NEW_BALL_SPAWN);
+        if (nextBallSpawnEvent)
+        {
+            this.#setNextBallSpawnInformation(nextBallSpawnEvent.nextSpawnInformation)
+        }
+
+        this.#updateNextBallSpawnIndicator();
         state.players.forEach(p => {
             const player = this.playersById.get(p.id);
             player.graphic.setPosition(p.x, p.y);
@@ -129,6 +138,59 @@ class SceneActiveGame extends Phaser.Scene {
             .slice(-20);
         this.eventHistory.events = nextEvents;
         this.eventHistory.label.setText(nextEvents.join('\n'));
+    }
+
+    #setNextBallSpawnInformation(nextSpawnInformation)
+    {
+        const ballRadius = 15
+        const lineLength = 2* ballRadius;
+        const spawnIndicator = this.add.circle(0, 0, ballRadius, 0xffffff);
+        const initialDirectionLine = this.add.line(0, 0, -1/2 * lineLength, 0, 1/2 * lineLength, 0, 0x22dddd);
+        initialDirectionLine.setRotation(nextSpawnInformation.angle + Math.PI);
+
+        if (this.nextBallSpawnIndicator)
+        {
+            this.nextBallSpawnIndicator.setAlpha(0); // Hide previous container if necessary
+        }
+        this.nextBallSpawnIndicator = this.add.container(nextSpawnInformation.spawn.x, nextSpawnInformation.spawn.y, [initialDirectionLine, spawnIndicator]);
+        this.nextSpawnInformation = Object.assign({ nextSpawnTimerStart: Date.now()}, nextSpawnInformation);
+    }
+
+    /**
+     * Method to update the alpha value for this.nextBallSpawnContainer to allow for "blinking" to indicate where/when ball will spawn 
+     * @returns Nothing - sets alpha for this.nextBallSpawnContainer
+     */
+    #updateNextBallSpawnIndicator()
+    {
+        // If next spawn not declared, skip this process
+        if (!this.nextSpawnInformation)
+        {
+            return;
+        }
+
+        const timeElapsedSinceNextSpawnSet = (Date.now() - this.nextSpawnInformation.nextSpawnTimerStart);
+        // If ball should have spawned, set alpha to 0 so next spawn indicator isn't distracting/inaccurate 
+        if (timeElapsedSinceNextSpawnSet >= this.nextSpawnInformation.nextSpawnTimingMs)
+        {
+            this.nextBallSpawnIndicator.setAlpha(0);
+        }
+        else
+        {
+            this.nextBallSpawnIndicator.setAlpha(this.#getNextSpawnOpacity(timeElapsedSinceNextSpawnSet));
+        }
+    }
+
+    /**
+     * Helper method to determine the opacity of the next spawn container to represent how fast it should be blinking
+     * frequencyScale determines the frequency/how many blinks between when the next spawn is declared and when we expect it to spawn
+     * The calculation is a sin wave between 1 and 0 with increasing frequency as timeElapsedSinceNextSpawnSet approaches this.nextSpawnInformation.INTERVAL_TIMING_MS
+     * @param {int} timeElapsedSinceNextSpawnSet Time between when next spawn was declared and current time
+     * @returns 
+     */
+    #getNextSpawnOpacity(timeElapsedSinceNextSpawnSet)
+    {
+        const frequencyScale = 100 / Math.pow(this.nextSpawnInformation.nextSpawnTimingMs/1000, 2)
+        return 0.5 * Math.sin(frequencyScale * Math.pow(timeElapsedSinceNextSpawnSet/1000,2))+0.5 
     }
 
     handleGameUpdate(msg) {
