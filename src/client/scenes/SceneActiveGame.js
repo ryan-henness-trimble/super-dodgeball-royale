@@ -83,6 +83,7 @@ class SceneActiveGame extends Phaser.Scene {
         });
 
         this.ballsById = new Map();
+        this.#updateNextSpawnInformation(arena.events)
 
         this.eventHistory = {
             events: ['Events:'],
@@ -98,13 +99,9 @@ class SceneActiveGame extends Phaser.Scene {
     }
 
     renderState(state) {
-        const nextBallSpawnEvent = state.events.find(e => e.type === SDRGame.gameevents.NEW_BALL_SPAWN);
-        if (nextBallSpawnEvent)
-        {
-            this.#setNextBallSpawnInformation(nextBallSpawnEvent.nextSpawnInformation)
-        }
-
+        this.#updateNextSpawnInformation(state.events)
         this.#updateNextBallSpawnIndicator();
+
         state.players.forEach(p => {
             const player = this.playersById.get(p.id);
             player.graphic.setPosition(p.x, p.y);
@@ -191,6 +188,19 @@ class SceneActiveGame extends Phaser.Scene {
     {
         const frequencyScale = 100 / Math.pow(this.nextSpawnInformation.nextSpawnTimingMs/1000, 2)
         return 0.5 * Math.sin(frequencyScale * Math.pow(timeElapsedSinceNextSpawnSet/1000,2))+0.5 
+    }
+
+    /**
+     * Method that will update the next ball spawn info if a NEW_BALL_SPAWN event is found
+     * @param {*} events Array of step events
+     */
+    #updateNextSpawnInformation(events)
+    {
+        const nextBallSpawnEvent = events.find(e => e.type === SDRGame.gameevents.NEW_BALL_SPAWN);
+        if (nextBallSpawnEvent)
+        {
+            this.#setNextBallSpawnInformation(nextBallSpawnEvent.nextSpawnInformation)
+        }
     }
 
     handleGameUpdate(msg) {
