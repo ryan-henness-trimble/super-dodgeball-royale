@@ -5,6 +5,7 @@ class SceneLobby extends Phaser.Scene {
 
         this.GameConstants = SDRGame.GameConstants;
         this.playerGraphicsList = [];
+        this.currentPlayerInputText = "";
     }
 
     preload ()
@@ -86,6 +87,7 @@ class SceneLobby extends Phaser.Scene {
         });
 
         this.createPlayerNameInput(lobbyState, 600, 200);
+        this.#updatePlayerNameText();
         this.createColorPicker(lobbyState, "Select Player Color:", "playerColor", 600, 300);
         this.createColorPicker(lobbyState, "Select Shield Color:", "shieldColor", 600, 450);
 
@@ -155,7 +157,9 @@ class SceneLobby extends Phaser.Scene {
         let nameInputForm = this.add.dom(0, 0).createFromCache('playerInputForm');
         nameInputForm.originX = 0;
         nameInputForm.addListener('click');
-        nameInputForm.on('click', this.updatePlayerName.bind(this, lobbyState));
+        nameInputForm.on('click', this.#renamePlayer.bind(this, lobbyState));
+        nameInputForm.addListener('change');
+        nameInputForm.on('change', this.#storePlayerNameText.bind(this));
         this.playerNameInput = nameInputForm;
 
         const nameFormContainer = this.add.container(containerX, containerY, nameInputForm);
@@ -175,7 +179,7 @@ class SceneLobby extends Phaser.Scene {
         }
     }
 
-    updatePlayerName(lobbyState, event) {
+    #renamePlayer(lobbyState, event) {
         if (event.target.name === 'changeNameButton')
         {
             let playerName = this.getPlayerNameText();
@@ -185,7 +189,20 @@ class SceneLobby extends Phaser.Scene {
                 currentPlayerState.name = playerName;
                 const updateLobbyMemberCommand = SDRGame.Messaging.LobbyCommands.createUpdateLobbyMember(currentPlayerState);
                 this.network.lobby.sendLobbyCommand(updateLobbyMemberCommand);
+                this.currentPlayerInputText = ""; // Reset text box input after submitting name
             }
+        }
+    }
+
+    #updatePlayerNameText()
+    {
+        document.getElementById("playerName").value = this.currentPlayerInputText;
+    }
+
+    #storePlayerNameText(event) {
+        if (event.target.name === 'playerName')
+        {
+            this.currentPlayerInputText = this.getPlayerNameText();
         }
     }
 
