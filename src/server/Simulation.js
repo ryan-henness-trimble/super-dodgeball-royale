@@ -48,8 +48,6 @@ class Simulation {
     constructor() {
         this.mapProvider = new MapProvider();
 
-        this.ballSpawnPoint = null;
-
         this.engine = null;
 
         this.playersById = new Map();
@@ -69,9 +67,7 @@ class Simulation {
     reset(mapName, numberOfPlayers) {
         const gameMap = this.mapProvider.getMap(mapName);
 
-        this.ballSpawnTiming = new BallSpawnTiming();
-
-        this.ballSpawnPoint = gameMap.ballSpawn;
+        this.ballSpawnManager = new BallSpawnManager().initializeWithBallSpawnPoint(gameMap.ballSpawn);
 
         this.roundEnded = false;
 
@@ -82,7 +78,7 @@ class Simulation {
         this.playersHit = [];
         this.playersToEliminate = [];
         this.iframePlayers = [];
-        this.stepEvents = [];
+        this.stepEvents = [gameevents.createNewBallSpawn(this.ballSpawnManager.getNextSpawnInformation())];
         this.playerEliminationOrder = [];
 
         const wallBodies = gameMap.walls.map(w => makeWall(w.x, w.y, w.w, w.h, w.angle));
@@ -116,7 +112,8 @@ class Simulation {
                     angle: p.body.angle,
                     r: PLAYER_RADIUS
                 };
-            })
+            }),
+            events: this.stepEvents
         };
     }
 
@@ -133,6 +130,10 @@ class Simulation {
         }
 
         commands.forEach(c => {
+            if (c.type === gameevents.NEW_BALL_SPAWN) {
+                return;
+            }
+
             const player = this.playersById.get(c.id);
 
             if (player.isEliminated) {
@@ -150,12 +151,13 @@ class Simulation {
             Body.setAngularVelocity(player.body, rotation);
         });
 
-        if (this.ballSpawnTiming.shouldSpawnBall()) {
-            this.spawnBall(this.ballSpawnPoint, this.engine.world);
-            this.ballSpawnTiming.ballWasSpawned();
+        if (this.ballSpawnManager.shouldSpawnBall()) {
+            this.spawnBall(this.engine.world);
+            this.ballSpawnManager.ballWasSpawned();
+            this.stepEvents.push(gameevents.createNewBallSpawn(this.ballSpawnManager.getNextSpawnInformation()));
         }
 
-        this.ballSpawnTiming.step(timestepMs);
+        this.ballSpawnManager.step(timestepMs);
 
         Engine.update(this.engine, timestepMs);
 
@@ -211,7 +213,10 @@ class Simulation {
                         this.playersHit.push(this.playersById.get(playerId));
                         break;
                     case BODY_TYPE.PLAYER_SHIELD:
-                        this.setBallSpeed(collisionInfo.ball, BALL_BOOSTED_SPEED);
+                        const player = this.playersById.get(collisionInfo.other.parent.id);
+
+                        // Subtract Pi/2 since shield is not in line with angle 0
+                        this.setBodyVelocity(collisionInfo.ball, player.body.angle - Math.PI/2, BALL_BOOSTED_SPEED);
                         break;
                 }
             }
@@ -234,6 +239,10 @@ class Simulation {
                 singleBallCollision: false
             };
         }
+    }
+
+    setBodyVelocity(body, angle, speed) {
+        Body.setVelocity(body, polarToCartesian(angle, speed));
     }
 
     setBallSpeed(ballBody, speed) {
@@ -308,13 +317,10 @@ class Simulation {
         }
     }
 
-    spawnBall(spawnPoint, world) {
-        const angle = 2 * Math.PI * Math.random();
-        const xVel = BALL_BASE_SPEED * Math.cos(angle);
-        const yVel = BALL_BASE_SPEED * Math.sin(angle);
-
-        const body = makeBall(spawnPoint.x, spawnPoint.y);
-        Body.setVelocity(body, { x: xVel, y: yVel });
+    spawnBall(world) {
+        const nextBallSpawn = this.ballSpawnManager.getNextSpawnInformation();
+        const body = makeBall(nextBallSpawn.spawn.x, nextBallSpawn.spawn.y);
+        Body.setVelocity(body, { x: nextBallSpawn.xVel, y: nextBallSpawn.yVel });
         const ball = {
             id: body.id,
             body: body
@@ -331,13 +337,28 @@ class Simulation {
     }
 }
 
-class BallSpawnTiming {
+class BallSpawnManager {
 
     constructor() {
         this.INTERVAL_TIMING_MS = 5000;
 
         // First ball spawn should always be quick
         this.nextSpawnTimingMs = 2000;
+        this.nextSpawnInformation = null;
+        this.ballSpawnPoints = []
+    }
+
+    initializeWithBallSpawnPoint(ballSpawnPoint)
+    {
+        this.#addBallSpawnPoint(ballSpawnPoint);
+        this.nextSpawnInformation = this.#generateNewSpawnInformation();
+        return this;
+    }
+
+    // Get next spawn information plus spawn timing
+    getNextSpawnInformation()
+    {
+        return Object.assign({ nextSpawnTimingMs: this.nextSpawnTimingMs }, this.nextSpawnInformation )
     }
 
     timeUntilNextSpawn() {
@@ -354,6 +375,29 @@ class BallSpawnTiming {
 
     ballWasSpawned() {
         this.nextSpawnTimingMs = this.INTERVAL_TIMING_MS;
+        this.nextSpawnInformation = this.#generateNewSpawnInformation();
+    }
+
+    #addBallSpawnPoint(spawnPoint)
+    {
+        if (!this.ballSpawnPoints.includes(bsp => bsp.x === spawnPoint.x && bsp.y === spawnPoint.y))
+        {
+            this.ballSpawnPoints.push(spawnPoint);
+        }
+    }
+
+    #generateNewSpawnInformation()
+    {
+        const angle = 2 * Math.PI * Math.random();
+        const xVel = BALL_BASE_SPEED * Math.cos(angle);
+        const yVel = BALL_BASE_SPEED * Math.sin(angle);
+        const spawn = this.ballSpawnPoints[Math.floor(Math.random()*(this.ballSpawnPoints.length - 1))]
+        return {
+            spawn: spawn,
+            xVel: xVel,
+            yVel: yVel,
+            angle: angle
+        }
     }
 }
 
@@ -458,6 +502,13 @@ function makeCircle(x, y, r) {
     circle.inertia = Infinity;
 
     return circle;
+}
+
+function polarToCartesian(angle, magnitude) {
+    return {
+        x: magnitude * Math.cos(angle),
+        y: magnitude * Math.sin(angle)
+    };
 }
 
 function toRadians(degrees) {
