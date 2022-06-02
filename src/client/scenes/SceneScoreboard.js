@@ -21,7 +21,7 @@ class SceneScoreboard extends Phaser.Scene {
 
             const playerObjects = [playerBall, playerLabel];
 
-            this.add.container(200, 200 + i * 50, playerObjects);
+            this.add.container(200, 200 + i * 40, playerObjects);
         });
 
         if (this.network.lobby.playerId === this.network.lobby.lobbyState.host) {

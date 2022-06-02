@@ -69,19 +69,22 @@ class SceneLobby extends Phaser.Scene {
             const playerShield = this.add.rectangle(40, -15, this.GameConstants.PLAYER_HITBOX_RADIUS*1.8, 25, m.shieldColor);
             const playerBall = this.add.circle(40, 0, this.GameConstants.PLAYER_HITBOX_RADIUS, m.playerColor);
 
+            const playerIcon = this.add.container(20, 0, [playerShield, playerBall]);
+            playerIcon.setScale(0.75);
+
             const name = m.id === this.network.lobby.playerId
                 ? `${m.name} (you)`
                 : m.name;
             const playerLabel = this.add.text(80, -10, name);
 
-            const playerObjects = [playerShield, playerBall, playerLabel];
+            const playerObjects = [playerIcon, playerLabel];
 
             if (m.id === lobbyState.host) {
                 const hostIndicator = this.add.rectangle(0, 0, 10, 10, 0xe8d210);
                 playerObjects.push(hostIndicator);
             }
 
-            const container = this.add.container(40, 180 + 50 * i, playerObjects);
+            const container = this.add.container(40, 180 + 45 * i, playerObjects);
 
             this.playerGraphicsList.push(container);
         });
