@@ -84,11 +84,6 @@ class SceneActiveGame extends Phaser.Scene {
 
         this.ballsById = new Map();
         this.#updateNextSpawnInformation(arena.events)
-
-        this.eventHistory = {
-            events: ['Events:'],
-            label: this.add.text(1120, 50, 'Events:')
-        };
     }
 
     registerInputKeys() {
@@ -129,12 +124,6 @@ class SceneActiveGame extends Phaser.Scene {
                 this.ballsById.set(b.id, newBall);
             }
         });
-
-        const nextEvents = this.eventHistory.events
-            .concat(state.events.map(e => this.formatEventAsString(e)))
-            .slice(-20);
-        this.eventHistory.events = nextEvents;
-        this.eventHistory.label.setText(nextEvents.join('\n'));
     }
 
     #setNextBallSpawnInformation(nextSpawnInformation)
