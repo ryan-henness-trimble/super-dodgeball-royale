@@ -4,16 +4,22 @@ class SceneActiveGame extends Phaser.Scene {
         super('active-game');
     }
 
-    preload() { }
+    preload() {
+        // Load in animation
+        this.load.spritesheet('elimination', 'assets/img/elimination.png', {
+            frameWidth: 40, frameHeight: 40
+        });
+    }
 
     create({ network, initialState }) {
         this.network = network;
         this.lastSimUpdate = null;
         this.nextBallSpawnIndicator = null;
         this.nextSpawnInformation = null;
+        this.events = [];
 
         this.add.text(20, 20, 'Active Game');
-        
+
         this.infoLabel = this.add.text(20, 60, 'Waiting for players');
 
         this.registerInputKeys();
@@ -22,11 +28,19 @@ class SceneActiveGame extends Phaser.Scene {
         this.network.lobby.subscribeToGameUpdates(this.handleGameUpdate.bind(this));
         this.network.lobby.subscribeToSimUpdates((simState) => {
             this.lastSimUpdate = simState;
+            this.events = simState.events;
         });
 
         this.updateFn = this.waitForSimUpdates.bind(this);
 
         this.network.lobby.sendGameCommand(SDRGame.Messaging.GameCommands.createClientReady());
+
+        this.anims.create({
+            key: 'elim_anim',
+            frames: this.anims.generateFrameNumbers('elimination'),
+            frameRate: 8,
+            repeat: 3
+        });
     }
 
     update() {
@@ -83,7 +97,8 @@ class SceneActiveGame extends Phaser.Scene {
         });
 
         this.ballsById = new Map();
-        this.#handleStateEvents(arena.events)
+        this.events = arena.events;
+        this.#handleStateEvents()
     }
 
     registerInputKeys() {
@@ -94,7 +109,7 @@ class SceneActiveGame extends Phaser.Scene {
     }
 
     renderState(state) {
-        this.#handleStateEvents(state.events);
+        this.#handleStateEvents();
 
         this.#updateNextBallSpawnIndicator();
 
@@ -143,22 +158,30 @@ class SceneActiveGame extends Phaser.Scene {
         this.nextSpawnInformation = Object.assign({ nextSpawnTimerStart: Date.now()}, nextSpawnInformation);
     }
 
-    #handleStateEvents(events) {
-        events.forEach(e => {
+    #handleStateEvents() {
+        this.events.forEach(e => {
             switch (e.type) {
                 case SDRGame.gameevents.NEW_BALL_SPAWN:
                     this.#setNextBallSpawnInformation(e.nextSpawnInformation);
                     break;
                 case SDRGame.gameevents.PLAYER_ELIMINATED:
+                    const player = this.playersById.get(e.playerId);
+                    this.explosionObject = this.physics.add.sprite(player.graphic.x, player.graphic.y);
+                    this.explosionObject.play('elim_anim');
+                    setTimeout(() => {
+                        this.explosionObject.destroy();
+                    }, 1000);
                     break;
                 default:
                     break;
             }
         });
+
+        this.events = [];
     }
 
     /**
-     * Method to update the alpha value for this.nextBallSpawnContainer to allow for "blinking" to indicate where/when ball will spawn 
+     * Method to update the alpha value for this.nextBallSpawnContainer to allow for "blinking" to indicate where/when ball will spawn
      * @returns Nothing - sets alpha for this.nextBallSpawnContainer
      */
     #updateNextBallSpawnIndicator()
@@ -170,7 +193,7 @@ class SceneActiveGame extends Phaser.Scene {
         }
 
         const timeElapsedSinceNextSpawnSet = (Date.now() - this.nextSpawnInformation.nextSpawnTimerStart);
-        // If ball should have spawned, set alpha to 0 so next spawn indicator isn't distracting/inaccurate 
+        // If ball should have spawned, set alpha to 0 so next spawn indicator isn't distracting/inaccurate
         if (timeElapsedSinceNextSpawnSet >= this.nextSpawnInformation.nextSpawnTimingMs)
         {
             this.nextBallSpawnIndicator.setAlpha(0);
@@ -186,12 +209,12 @@ class SceneActiveGame extends Phaser.Scene {
      * frequencyScale determines the frequency/how many blinks between when the next spawn is declared and when we expect it to spawn
      * The calculation is a sin wave between 1 and 0 with increasing frequency as timeElapsedSinceNextSpawnSet approaches this.nextSpawnInformation.INTERVAL_TIMING_MS
      * @param {int} timeElapsedSinceNextSpawnSet Time between when next spawn was declared and current time
-     * @returns 
+     * @returns
      */
     #getNextSpawnOpacity(timeElapsedSinceNextSpawnSet)
     {
         const frequencyScale = 100 / Math.pow(this.nextSpawnInformation.nextSpawnTimingMs/1000, 2)
-        return 0.5 * Math.sin(frequencyScale * Math.pow(timeElapsedSinceNextSpawnSet/1000,2))+0.5 
+        return 0.5 * Math.sin(frequencyScale * Math.pow(timeElapsedSinceNextSpawnSet/1000,2))+0.5
     }
 
     handleGameUpdate(msg) {
