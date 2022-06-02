@@ -78,7 +78,7 @@ class Simulation {
         this.playersHit = [];
         this.playersToEliminate = [];
         this.iframePlayers = [];
-        this.stepEvents = [];
+        this.stepEvents = [gameevents.createNewBallSpawn(this.ballSpawnManager.getNextSpawnInformation())];
         this.playerEliminationOrder = [];
 
         const wallBodies = gameMap.walls.map(w => makeWall(w.x, w.y, w.w, w.h, w.angle));
@@ -112,7 +112,8 @@ class Simulation {
                     angle: p.body.angle,
                     r: PLAYER_RADIUS
                 };
-            })
+            }),
+            events: this.stepEvents
         };
     }
 

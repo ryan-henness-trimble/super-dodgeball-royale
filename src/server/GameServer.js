@@ -154,7 +154,7 @@ class GameServer {
         lobby.resetPlayerAcknowledgements();
         const initialState = lobby.setUpNewGame();
 
-        const msg = Messaging.GameUpdates.createGameStarting(initialState.walls, initialState.players);
+        const msg = Messaging.GameUpdates.createGameStarting(initialState.walls, initialState.players, initialState.events);
         this.broadcastGameUpdate(lobby.code, msg);
     }
 
