@@ -83,7 +83,7 @@ class SceneActiveGame extends Phaser.Scene {
         });
 
         this.ballsById = new Map();
-        this.#updateNextSpawnInformation(arena.events)
+        this.#handleStateEvents(arena.events)
     }
 
     registerInputKeys() {
@@ -94,7 +94,8 @@ class SceneActiveGame extends Phaser.Scene {
     }
 
     renderState(state) {
-        this.#updateNextSpawnInformation(state.events)
+        this.#handleStateEvents(state.events);
+
         this.#updateNextBallSpawnIndicator();
 
         state.players.forEach(p => {
@@ -142,6 +143,20 @@ class SceneActiveGame extends Phaser.Scene {
         this.nextSpawnInformation = Object.assign({ nextSpawnTimerStart: Date.now()}, nextSpawnInformation);
     }
 
+    #handleStateEvents(events) {
+        events.forEach(e => {
+            switch (e.type) {
+                case SDRGame.gameevents.NEW_BALL_SPAWN:
+                    this.#setNextBallSpawnInformation(e.nextSpawnInformation);
+                    break;
+                case SDRGame.gameevents.PLAYER_ELIMINATED:
+                    break;
+                default:
+                    break;
+            }
+        });
+    }
+
     /**
      * Method to update the alpha value for this.nextBallSpawnContainer to allow for "blinking" to indicate where/when ball will spawn 
      * @returns Nothing - sets alpha for this.nextBallSpawnContainer
@@ -177,19 +192,6 @@ class SceneActiveGame extends Phaser.Scene {
     {
         const frequencyScale = 100 / Math.pow(this.nextSpawnInformation.nextSpawnTimingMs/1000, 2)
         return 0.5 * Math.sin(frequencyScale * Math.pow(timeElapsedSinceNextSpawnSet/1000,2))+0.5 
-    }
-
-    /**
-     * Method that will update the next ball spawn info if a NEW_BALL_SPAWN event is found
-     * @param {*} events Array of step events
-     */
-    #updateNextSpawnInformation(events)
-    {
-        const nextBallSpawnEvent = events.find(e => e.type === SDRGame.gameevents.NEW_BALL_SPAWN);
-        if (nextBallSpawnEvent)
-        {
-            this.#setNextBallSpawnInformation(nextBallSpawnEvent.nextSpawnInformation)
-        }
     }
 
     handleGameUpdate(msg) {

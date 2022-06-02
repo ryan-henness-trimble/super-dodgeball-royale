@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const { LobbyMembership } = require('./LobbyMembership');
 const { Messaging } = require('../shared/Messaging');
+const { gameconstants } = require('../shared/gameconstants');
 
 class GameServer {
 
@@ -47,6 +48,12 @@ class GameServer {
 
         socket.on(Messaging.Channels.JOIN_LOBBY, (lobbyCode, callback) => {
             if (this.lobbies.playerIsInALobby(socket.id) || !this.lobbies.lobbyExists(lobbyCode)) {
+                callback({ success: false });
+                return;
+            }
+
+            const lobby = this.lobbies.getLobby(lobbyCode);
+            if (lobby.size >= gameconstants.MAX_PLAYERS_PER_LOBBY) {
                 callback({ success: false });
                 return;
             }

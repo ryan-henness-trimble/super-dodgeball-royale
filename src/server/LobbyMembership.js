@@ -116,6 +116,10 @@ class Lobby {
         this.playerAcknowledgement = null;
     }
 
+    get size() {
+        return this.members.length;
+    }
+
     addMember(playerId) {
         const validPlayerCustomization = this.playerCustomizationManager.generateValidPlayerCustomization(`Player ${this.lastPlayerNumber}`);
         const newMember = new LobbyMember(playerId, validPlayerCustomization);

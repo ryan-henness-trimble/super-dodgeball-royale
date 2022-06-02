@@ -278,6 +278,7 @@ class Simulation {
             Composite.remove(this.engine.world, player.body);
             player.isEliminated = true;
 
+            this.stepEvents.push(gameevents.createPlayerEliminated(player.id));
             this.playerEliminationOrder.push(player);
         });
 
