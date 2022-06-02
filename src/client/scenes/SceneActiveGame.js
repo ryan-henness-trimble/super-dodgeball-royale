@@ -19,10 +19,6 @@ class SceneActiveGame extends Phaser.Scene {
         this.nextSpawnInformation = null;
         this.events = [];
 
-        this.add.text(20, 20, 'Active Game');
-
-        this.infoLabel = this.add.text(20, 60, 'Waiting for players');
-
         this.registerInputKeys();
         this.renderInitialGameState(initialState);
 
@@ -52,7 +48,7 @@ class SceneActiveGame extends Phaser.Scene {
 
     waitForSimUpdates() {
         if (this.lastSimUpdate) {
-            this.infoLabel.setText('Playing Game');
+            this.infoLabel.setAlpha(0);
             this.updateFn = this.runGame.bind(this);
         }
     }
@@ -73,8 +69,15 @@ class SceneActiveGame extends Phaser.Scene {
     }
 
     renderInitialGameState(arena) {
+        const bg = this.add.image(0, 0, 'background');
+        bg.setOrigin(0, 0);
+        bg.displayWidth = SDRGame.GameConstants.WINDOW_WIDTH;
+        bg.displayHeight = SDRGame.GameConstants.WINDOW_HEIGHT;
+
+        this.infoLabel = this.add.text(20, 60, 'Waiting for players');
+
         arena.walls.forEach(wall => {
-            const wallGraphic = this.add.rectangle(wall.x, wall.y, wall.w, wall.h, 0x000000);
+            const wallGraphic = this.add.rectangle(wall.x, wall.y, wall.w, wall.h, 0x675270);
             wallGraphic.setAngle(wall.angle);
         });
 

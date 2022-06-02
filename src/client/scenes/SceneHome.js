@@ -17,15 +17,12 @@ class SceneHome extends Phaser.Scene {
 
         this.network = network;
 
-        const createLobbyBtn = document.getElementById('create-lobby-btn');
-        const bg = this.add.image(this.GameConstants.WINDOW_WIDTH/2, this.GameConstants.WINDOW_HEIGHT/2, 'background')
-        bg.setOrigin(0.5,0.5)
+        const bg = this.add.image(this.GameConstants.WINDOW_WIDTH/2, this.GameConstants.WINDOW_HEIGHT/2, 'background');
+        bg.setOrigin(0.5,0.5);
         bg.displayWidth = this.GameConstants.WINDOW_WIDTH;
         bg.displayHeight = this.GameConstants.WINDOW_HEIGHT;
 
         this.createTitleAndButtonContainer();
-
-        this.add.text(20, 20, 'Home');
 
         this.add.text(20, 60, homeMessages.join('\n'));
     }
