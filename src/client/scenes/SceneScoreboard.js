@@ -6,12 +6,14 @@ class SceneScoreboard extends Phaser.Scene {
 
     preload() {
         this.load.audio('airhorn', ['assets/audio/airhorn.mp3']);
+        this.load.audio('cheer', ['assets/audio/cheer.wav']);
     }
 
     create({ network, scoreboard }) {
         this.network = network;
 
         this.airhorn = this.sound.add('airhorn', { loop: false, volume: 0.2 });
+        this.cheer = this.sound.add('cheer', { loop: false, volume: 0.2 });
 
         this.add.text(100,100, 'Scoreboard');
 
@@ -25,13 +27,15 @@ class SceneScoreboard extends Phaser.Scene {
         });
 
         if (this.network.lobby.playerId === this.network.lobby.lobbyState.host) {
-            this.airhorn.play();
             this.createLobbyReturnButton();
         } else {
             this.add.text(400, 100, 'Waiting for host to choose next action');
         }
 
         this.network.lobby.subscribeToGameUpdates(this.handleGameUpdate.bind(this));
+
+        this.airhorn.play();
+        this.cheer.play();
 
         const msg = SDRGame.Messaging.GameCommands.createOnScoreboard();
         this.network.lobby.sendGameCommand(msg);
