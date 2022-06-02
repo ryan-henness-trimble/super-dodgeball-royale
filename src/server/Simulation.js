@@ -213,7 +213,10 @@ class Simulation {
                         this.playersHit.push(this.playersById.get(playerId));
                         break;
                     case BODY_TYPE.PLAYER_SHIELD:
-                        this.setBallSpeed(collisionInfo.ball, BALL_BOOSTED_SPEED);
+                        const player = this.playersById.get(collisionInfo.other.parent.id);
+
+                        // Subtract Pi/2 since shield is not in line with angle 0
+                        this.setBodyVelocity(collisionInfo.ball, player.body.angle - Math.PI/2, BALL_BOOSTED_SPEED);
                         break;
                 }
             }
@@ -236,6 +239,10 @@ class Simulation {
                 singleBallCollision: false
             };
         }
+    }
+
+    setBodyVelocity(body, angle, speed) {
+        Body.setVelocity(body, polarToCartesian(angle, speed));
     }
 
     setBallSpeed(ballBody, speed) {
@@ -495,6 +502,13 @@ function makeCircle(x, y, r) {
     circle.inertia = Infinity;
 
     return circle;
+}
+
+function polarToCartesian(angle, magnitude) {
+    return {
+        x: magnitude * Math.cos(angle),
+        y: magnitude * Math.sin(angle)
+    };
 }
 
 function toRadians(degrees) {
