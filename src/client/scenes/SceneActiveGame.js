@@ -86,16 +86,20 @@ class SceneActiveGame extends Phaser.Scene {
         arena.players.forEach((p, i) => {
             const shield = this.add.rectangle(0, -15, 25, 30, p.shieldColor);
             const body = this.add.circle(0, 0, p.r, p.playerColor);
+
+            const playerIcon = this.add.container(0, 0, [shield, body]);
+
             const label = this.add.text(0, 0, p.name, { fill: '#ffffff' });
 
-            const playerGraphic = this.add.container(p.x, p.y, [shield, body, label]);
+            const fullPlayer = this.add.container(p.x, p.y, [playerIcon, label]);
 
             const player = {
                 id: p.id,
                 name: p.name,
                 playerColor: p.playerColor,
-                graphic: playerGraphic,
+                body: playerIcon,
                 hitboxGraphic: body,
+                graphic: fullPlayer,
                 hpLabel: this.add.text(20, 100 + i*30, this.formatHPLabelString(p.name, p.hp))
             };
 
@@ -123,8 +127,10 @@ class SceneActiveGame extends Phaser.Scene {
 
         state.players.forEach(p => {
             const player = this.playersById.get(p.id);
-            player.graphic.setPosition(p.x, p.y);
-            player.graphic.setRotation(p.angle);
+            this.setPlayerPosition(player, p.x, p.y);
+            this.setPlayerAngle(player, p.angle);
+            // player.graphic.setPosition(p.x, p.y);
+            // player.graphic.setRotation(p.angle);
 
             player.hpLabel.setText(this.formatHPLabelString(player.name, p.hp));
 
@@ -148,6 +154,14 @@ class SceneActiveGame extends Phaser.Scene {
                 this.ballsById.set(b.id, newBall);
             }
         });
+    }
+
+    setPlayerPosition(player, x, y) {
+        player.graphic.setPosition(x, y);
+    }
+
+    setPlayerAngle(player, angle) {
+        player.body.setRotation(angle);
     }
 
     #setNextBallSpawnInformation(nextSpawnInformation)
