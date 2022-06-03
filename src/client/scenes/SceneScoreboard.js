@@ -15,7 +15,7 @@ class SceneScoreboard extends Phaser.Scene {
         this.airhorn = this.sound.add('airhorn', { loop: false, volume: 0.2 });
         this.cheer = this.sound.add('cheer', { loop: false, volume: 0.2 });
 
-        this.add.text(100,100, 'Scoreboard');
+        this.add.text(100, 100, 'Scoreboard');
 
         scoreboard.forEach((p, i) => {
             const playerBall = this.add.circle(40, 0, SDRGame.GameConstants.PLAYER_HITBOX_RADIUS, p.color);
@@ -26,13 +26,22 @@ class SceneScoreboard extends Phaser.Scene {
             this.add.container(200, 200 + i * 40, playerObjects);
         });
 
+        this.createLobbyReturnButton();
+        this.createWaitingMessage();
+
         if (this.network.lobby.playerId === this.network.lobby.lobbyState.host) {
-            this.createLobbyReturnButton();
+            this.showLobbyButton();
         } else {
-            this.add.text(400, 100, 'Waiting for host to choose next action');
+            this.showWaitingMessage();
         }
 
         this.network.lobby.subscribeToGameUpdates(this.handleGameUpdate.bind(this));
+        this.network.lobby.subscribeToLobbyUpdates((lobbyState) => {
+            if (this.network.lobby.playerId === lobbyState.host) {
+                this.hideWaitingMessage();
+                this.showLobbyButton();
+            }
+        });
 
         this.playScoreboardSounds();
 
@@ -79,7 +88,32 @@ class SceneScoreboard extends Phaser.Scene {
                 this.network.lobby.sendGameCommand(msg);
             });
         const btnText = this.add.text(-75, -7, 'Return to Lobby');
-        this.startGameBtn = this.add.container(400, 100, [btnBack, btnText]);
+        this.backToLobbyBtn = this.add.container(400, 100, [btnBack, btnText]);
+
+        this.hideLobbyButton();
+    }
+
+    hideLobbyButton() {
+        this.backToLobbyBtn.setActive(false);
+        this.backToLobbyBtn.setVisible(false);
+    }
+
+    showLobbyButton() {
+        this.backToLobbyBtn.setActive(true);
+        this.backToLobbyBtn.setVisible(true);
+    }
+
+    createWaitingMessage() {
+        this.waitingMessage = this.add.text(400, 100, 'Waiting for host to choose next action');
+        this.hideWaitingMessage();
+    }
+
+    showWaitingMessage() {
+        this.waitingMessage.setAlpha(1);
+    }
+
+    hideWaitingMessage() {
+        this.waitingMessage.setAlpha(0);
     }
 
     _formatNameWithRank(name, rank) {

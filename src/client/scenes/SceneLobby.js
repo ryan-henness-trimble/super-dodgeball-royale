@@ -31,7 +31,7 @@ class SceneLobby extends Phaser.Scene {
         this.codeLabel = this.add.text(20, 50, 'Code:')
         this.copyCodeButton = this.createButtonObject(107.5, 100, "Copy Lobby Code", () => {
             navigator.clipboard.writeText(this.network.lobby.lobbyState.code);
-        })
+        });
         this.playersLabel = this.add.text(20, 130, 'Players:');
 
         this.playerGraphicsList = [];
