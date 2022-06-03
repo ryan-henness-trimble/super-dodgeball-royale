@@ -9,6 +9,9 @@ class SceneActiveGame extends Phaser.Scene {
         this.load.spritesheet('elimination', 'assets/img/elimination.png', {
             frameWidth: 40, frameHeight: 40
         });
+
+        this.load.image('heart', 'assets/img/pixel-heart-small.png');
+        
         this.load.audio('elimination_audio', ['assets/audio/elimination.wav']);
         this.load.audio('game-start', ['assets/audio/gamestart.wav']);
     }
@@ -77,7 +80,11 @@ class SceneActiveGame extends Phaser.Scene {
         bg.displayWidth = SDRGame.GameConstants.WINDOW_WIDTH;
         bg.displayHeight = SDRGame.GameConstants.WINDOW_HEIGHT;
 
-        this.infoLabel = this.add.text(20, 60, 'Waiting for players');
+        const infoX = SDRGame.GameConstants.WINDOW_WIDTH / 2;
+        const infoY = SDRGame.GameConstants.WINDOW_HEIGHT / 2;
+
+        this.infoLabel = this.add.text(infoX, infoY - 200, 'Waiting for players');
+        this.infoLabel.setOrigin(0.5, 0.5);
 
         arena.walls.forEach(wall => {
             const wallGraphic = this.add.rectangle(wall.x, wall.y, wall.w, wall.h, 0x675270);
@@ -92,9 +99,14 @@ class SceneActiveGame extends Phaser.Scene {
 
             const playerIcon = this.add.container(0, 0, [shield, body]);
 
-            const label = this.add.text(0, 0, p.name, { fill: '#ffffff' });
+            const label = this.add.text(0, 30, p.name, { fill: '#ffffff' });
+            label.setOrigin(0.5, 0.5);
 
-            const fullPlayer = this.add.container(p.x, p.y, [playerIcon, label]);
+            const heartGraphics = this.createHeartImages(p.hp);
+            this.renderLives(p.hp, heartGraphics);
+            const heartContainer = this.add.container(0, 0, heartGraphics);
+
+            const fullPlayer = this.add.container(p.x, p.y, [playerIcon, label, heartContainer]);
 
             const player = {
                 id: p.id,
@@ -103,7 +115,7 @@ class SceneActiveGame extends Phaser.Scene {
                 body: playerIcon,
                 hitboxGraphic: body,
                 graphic: fullPlayer,
-                hpLabel: this.add.text(20, 100 + i*30, this.formatHPLabelString(p.name, p.hp))
+                hearts: heartGraphics
             };
 
             this.playersById.set(p.id, player);
@@ -112,6 +124,20 @@ class SceneActiveGame extends Phaser.Scene {
         this.ballsById = new Map();
         this.events = arena.events;
         this.#handleStateEvents()
+    }
+
+    createHeartImages(hp) {
+        return Array.from(Array(hp).keys()).map(i => this.add.image(0, 0, 'heart'));
+    }
+
+    renderLives(numLives, heartIcons) {
+        const heartOffset = 10;
+        const startingOffset = -heartOffset * (numLives - 1) / 2;
+
+        heartIcons.slice(0, numLives).forEach((h, i) => {
+            h.setPosition(startingOffset + heartOffset * i, 0);
+        });
+        heartIcons.slice(numLives).forEach(h => h.setAlpha(0));
     }
 
     registerInputKeys() {
@@ -132,10 +158,8 @@ class SceneActiveGame extends Phaser.Scene {
             const player = this.playersById.get(p.id);
             this.setPlayerPosition(player, p.x, p.y);
             this.setPlayerAngle(player, p.angle);
-            // player.graphic.setPosition(p.x, p.y);
-            // player.graphic.setRotation(p.angle);
 
-            player.hpLabel.setText(this.formatHPLabelString(player.name, p.hp));
+            this.renderLives(p.hp, player.hearts);
 
             if (p.isEliminated) {
                 player.graphic.setAlpha(0);
@@ -253,23 +277,6 @@ class SceneActiveGame extends Phaser.Scene {
             default:
                 break;
         }
-    }
-
-    formatEventAsString(evt) {
-        switch (evt.type) {
-            case SDRGame.gameevents.ROUND_OVER:
-                return 'round over';
-            case SDRGame.gameevents.PLAYER_HIT:
-                return `hit: ${evt.playerId}`;
-            case SDRGame.gameevents.PLAYER_ELIMINATED:
-                return `out: ${evt.playerId}`;
-            default:
-                return 'unknown event';
-        }
-    }
-
-    formatHPLabelString(playerName, hp) {
-        return `${playerName} HP: ${hp}`;
     }
 
     _transitionToScoreboard(scoreboard) {
