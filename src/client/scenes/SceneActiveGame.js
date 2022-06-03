@@ -11,7 +11,7 @@ class SceneActiveGame extends Phaser.Scene {
         });
 
         this.load.image('heart', 'assets/img/pixel-heart-small.png');
-        
+
         this.load.audio('elimination_audio', ['assets/audio/elimination.wav']);
         this.load.audio('game-start', ['assets/audio/gamestart.wav']);
     }
@@ -94,7 +94,7 @@ class SceneActiveGame extends Phaser.Scene {
         this.playersById = new Map();
 
         arena.players.forEach((p, i) => {
-            const shield = this.add.rectangle(0, -15, 25, 30, p.shieldColor);
+            const shield = this.add.rectangle(0, -15, 30, 30, p.shieldColor);
             const body = this.add.circle(0, 0, p.r, p.playerColor);
 
             const playerIcon = this.add.container(0, 0, [shield, body]);

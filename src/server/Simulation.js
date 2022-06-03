@@ -33,11 +33,14 @@ const IFRAME_DURATION_ON_HIT = 2000;
 const BALL_BASE_SPEED = 3.0;
 const BALL_BOOSTED_SPEED = 12.0;
 
+const BUMP_DURATION = 100;
+const BUMP_SPEED = 20;
+
 const BODY_TYPE = Object.freeze({
-    WALL: 0,
+    WALL:          0,
     PLAYER_HITBOX: 1,
     PLAYER_SHIELD: 2,
-    BALL: 3
+    BALL:          3,
 });
 
 // TODO maybe want to use large simulation units, then scale down for rendering
@@ -97,7 +100,8 @@ class Simulation {
         Composite.add(this.engine.world, wallBodies);
         Composite.add(this.engine.world, players.map(p => p.body));
 
-        Events.on(this.engine, 'collisionEnd', this.handleCollisions.bind(this));
+        Events.on(this.engine, 'collisionStart', this.handleCollisionStart.bind(this));
+        Events.on(this.engine, 'collisionEnd', this.handleCollisionEnd.bind(this));
 
         // output below
         
@@ -140,14 +144,17 @@ class Simulation {
                 return;
             }
 
-            const velocity = {
-                x: getMovementDirection(c.left, c.right) * PLAYER_VELOCITY,
-                y: getMovementDirection(c.up, c.down) * PLAYER_VELOCITY
-            };
+            if (player.bumpDuration > 0) {
+                player.bumpDuration = Math.max(player.bumpDuration - timestepMs, 0);
+            } else {
+                const velocity = {
+                    x: getMovementDirection(c.left, c.right) * PLAYER_VELOCITY,
+                    y: getMovementDirection(c.up, c.down) * PLAYER_VELOCITY
+                };
+                Body.setVelocity(player.body, velocity);
+            }
 
             const rotation = getMovementDirection(c.ccw, c.cw) * SHIELD_ANGULAR_VELOCITY;
-
-            Body.setVelocity(player.body, velocity);
             Body.setAngularVelocity(player.body, rotation);
         });
 
@@ -197,16 +204,41 @@ class Simulation {
         };
     }
 
-    handleCollisions(evt) {
+    handleCollisionStart(evt) {
         evt.pairs.forEach(p => {
-            const collisionInfo = this.identifyCollidedBodies(p.bodyA, p.bodyB);
+            const collisionInfo = this.identifyCollisionType(p.bodyA, p.bodyB, BODY_TYPE.PLAYER_SHIELD);
+            if (collisionInfo.collisionOccurred) {
+                const otherType = this.idToBodyType.get(collisionInfo.other.id);
 
-            if (collisionInfo.singleBallCollision) {
+                switch (otherType) {
+                    case BODY_TYPE.PLAYER_HITBOX:
+                        const bumpingPlayer = this.playersById.get(collisionInfo.target.parent.id);
+                        const bumpAngle = playerAngleToShieldAngle(bumpingPlayer.body.angle);
+
+                        const playerToBump = this.playersById.get(collisionInfo.other.parent.id);
+                        playerToBump.bumpDuration = BUMP_DURATION;
+
+                        this.setBodyVelocity(playerToBump.body, bumpAngle, BUMP_SPEED);
+                        break;
+                    case BODY_TYPE.PLAYER_SHIELD:
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+    }
+
+    handleCollisionEnd(evt) {
+        evt.pairs.forEach(p => {
+            const collisionInfo = this.identifyCollisionType(p.bodyA, p.bodyB, BODY_TYPE.BALL);
+
+            if (collisionInfo.collisionOccurred) {
                 const otherType = this.idToBodyType.get(collisionInfo.other.id);
 
                 switch (otherType) {
                     case BODY_TYPE.WALL:
-                        this.setBallSpeed(collisionInfo.ball, BALL_BASE_SPEED);
+                        this.setBallSpeed(collisionInfo.target, BALL_BASE_SPEED);
                         break;
                     case BODY_TYPE.PLAYER_HITBOX:
                         const playerId = collisionInfo.other.parent.id;
@@ -216,27 +248,27 @@ class Simulation {
                         const player = this.playersById.get(collisionInfo.other.parent.id);
 
                         // Subtract Pi/2 since shield is not in line with angle 0
-                        this.setBodyVelocity(collisionInfo.ball, player.body.angle - Math.PI/2, BALL_BOOSTED_SPEED);
+                        this.setBodyVelocity(collisionInfo.target, playerAngleToShieldAngle(player.body.angle), BALL_BOOSTED_SPEED);
                         break;
                 }
             }
         });
     }
 
-    identifyCollidedBodies(bodyA, bodyB) {
+    identifyCollisionType(bodyA, bodyB, bodyType) {
         const bodies = [bodyA, bodyB];
 
-        const balls = bodies.filter(b => this.idToBodyType.get(b.id) === BODY_TYPE.BALL);
+        const targetBodies = bodies.filter(b => this.idToBodyType.get(b.id) === bodyType);
 
-        if (balls.length === 1) {
+        if (targetBodies.length === 0) {
             return {
-                singleBallCollision: true,
-                ball: balls[0],
-                other: balls[0].id === bodyA.id ? bodyB : bodyA
+                collisionOccurred: false
             };
         } else {
             return {
-                singleBallCollision: false
+                collisionOccurred: true,
+                target: targetBodies[0],
+                other: targetBodies[0].id === bodyA.id ? bodyB : bodyA
             };
         }
     }
@@ -413,7 +445,7 @@ function makePlayer(x, y) {
     };
 
     const hitbox = Bodies.circle(x, y, PLAYER_RADIUS, options);
-    const shield = Bodies.rectangle(x, y-15, 25, 30, options);
+    const shield = Bodies.rectangle(x, y-15, 30, 30, options);
 
     const player = Body.create({
         parts: [hitbox, shield],
@@ -431,6 +463,7 @@ function makePlayer(x, y) {
         iframeDuration: 0,
         body: player,
         hp: INITIAL_HP,
+        bumpDuration: 0,
         isEliminated: false
     };
 }
@@ -451,6 +484,10 @@ function makeBall(x, y) {
     };
 
     return Bodies.circle(x, y, BALL_RADIUS, options);
+}
+
+function playerAngleToShieldAngle(playerAngle) {
+    return playerAngle - Math.PI/2;
 }
 
 function getMovementDirection(moveTowardsNegative, moveTowardsPositive) {
