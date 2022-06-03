@@ -10,6 +10,7 @@ class SceneActiveGame extends Phaser.Scene {
             frameWidth: 40, frameHeight: 40
         });
         this.load.audio('elimination_audio', ['assets/audio/elimination.wav']);
+        this.load.audio('game-start', ['assets/audio/gamestart.wav']);
     }
 
     create({ network, initialState }) {
@@ -40,6 +41,7 @@ class SceneActiveGame extends Phaser.Scene {
         });
 
         this.eliminationAudio = this.sound.add('elimination_audio', { loop: false, volume: 0.2 });
+        this.startGameAudio = this.sound.add('game-start', { loop: false, volume: 0.2 });
     }
 
     update() {
@@ -49,6 +51,7 @@ class SceneActiveGame extends Phaser.Scene {
     waitForSimUpdates() {
         if (this.lastSimUpdate) {
             this.infoLabel.setAlpha(0);
+            this.startGameAudio.play();
             this.updateFn = this.runGame.bind(this);
         }
     }
