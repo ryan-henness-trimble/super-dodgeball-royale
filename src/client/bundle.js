@@ -6684,16 +6684,13 @@ exports.hasBinary = hasBinary;
 
 },{}],40:[function(require,module,exports){
 (function (global){(function (){
-const { GameClient } = require('./GameClient');
 const { ServerConnection } = require('./ServerConnection');
 const { gameevents } = require('../shared/gameevents');
 const { gameconstants } = require('../shared/gameconstants');
 const { Messaging } = require('../shared/Messaging');
 const { Configuration } = require('../shared/appsettings');
 
-// TODO remove GameClient
 global.window.SDRGame = {
-    GameClient,
     ServerConnection,
     Messaging,
     gameevents,
@@ -6702,79 +6699,7 @@ global.window.SDRGame = {
 };
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../shared/Messaging":43,"../shared/appsettings":44,"../shared/gameconstants":46,"../shared/gameevents":47,"./GameClient":41,"./ServerConnection":42}],41:[function(require,module,exports){
-const { io } = require('socket.io-client');
-const { Messaging } = require('../shared/Messaging');
-const { channels } = require('../shared/channels');
-
-class GameClient {
-
-    constructor(serverUrl) {
-        this.socket = io(serverUrl, {
-              cors: {
-                origin: "*",
-                methods: ["GET", "POST"]
-              },
-              transports: ["websocket", "polling"],
-              extraHeaders: {
-                "Access-Control-Allow-Origin": "*"
-              }
-        });
-    }
-
-    get playerId() {
-        return this.socket.id;
-    }
-
-    createLobby(lobbyCodeCallback) {
-        this.socket.once(Messaging.Channels.LOBBY_CREATED, lobbyCodeCallback);
-
-        this.socket.emit(Messaging.Channels.CREATE_LOBBY);
-    }
-
-    joinLobby(lobbyCode, onSuccess, onErrorJoining, onLobbyUpdate) {
-        this.socket.once(channels.LOBBY_JOINED, (msg) => {
-            if (msg.success) {
-                this.socket.on(Messaging.Channels.LOBBY_UPDATES, onLobbyUpdate);
-
-                onSuccess();
-
-                this.socket.emit(Messaging.Channels.LOBBY_COMMANDS, Messaging.LobbyCommands.createAckJoin());
-            } else {
-                onErrorJoining();
-            }
-        });
-
-        this.socket.emit(Messaging.Channels.JOIN_LOBBY, lobbyCode);
-    }
-
-    sendLobbyCommand(command) {
-        this.socket.emit(Messaging.Channels.LOBBY_COMMANDS, command);
-    }
-
-    sendGameCommand(command) {
-        this.socket.emit(Messaging.Channels.GAME_COMMANDS, command);
-    }
-
-    sendSimCommand(command) {
-        const networkCommand = Messaging.SimCommands.toNetworkFormat(command);
-        this.socket.emit(Messaging.Channels.SIM_COMMANDS, networkCommand);
-    }
-
-    subscribeToActiveGame(onGameUpdate, onSimUpdate) {
-        this.socket.on(Messaging.Channels.GAME_UPDATES, onGameUpdate);
-        this.socket.on(Messaging.Channels.SIM_UPDATES, onSimUpdate);
-    }
-
-    unsubscribeFromActiveGame() {
-        this.socket.removeAllListeners(Messaging.Channels.GAME_UPDATES);
-        this.socket.removeAllListeners(Messaging.Channels.SIM_UPDATES);
-    }
-}
-
-exports.GameClient = GameClient;
-
-},{"../shared/Messaging":43,"../shared/channels":45,"socket.io-client":29}],42:[function(require,module,exports){
+},{"../shared/Messaging":42,"../shared/appsettings":43,"../shared/gameconstants":44,"../shared/gameevents":45,"./ServerConnection":41}],41:[function(require,module,exports){
 const { io } = require('socket.io-client');
 const { Messaging } = require('../shared/Messaging');
 
@@ -6892,7 +6817,7 @@ class ServerConnection {
 
 exports.ServerConnection = ServerConnection;
 
-},{"../shared/Messaging":43,"socket.io-client":29}],43:[function(require,module,exports){
+},{"../shared/Messaging":42,"socket.io-client":29}],42:[function(require,module,exports){
 const Channels = {
     // no msg
     CREATE_LOBBY: 'create-lobby',
@@ -7022,7 +6947,7 @@ exports.Messaging = {
     SimCommands
 };
 
-},{}],44:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 // Set USE_LOCAL_SETTINGS based on your development
 // Remember to change it back before merging to main
 const USE_LOCAL_SETTINGS = false;
@@ -7041,48 +6966,7 @@ const Configuration = USE_LOCAL_SETTINGS ? localSettings : deployedSettings;
 
 exports.Configuration = Configuration;
 
-},{}],45:[function(require,module,exports){
-const channels = {
-    // no msg
-    CREATE_LOBBY: 'create-lobby',
-
-    // lobbyCode: string
-    JOIN_LOBBY: 'join-lobby',
-
-    // {
-    // success: bool,
-    // lobbyCode: string
-    // }
-    LOBBY_CREATED: 'lobby-created',
-
-    // {
-    // success: bool
-    // }
-    LOBBY_JOINED: 'lobby-joined',
-
-    // client to server
-    // {
-    //     command: 'ack-join' | 'leave-lobby' | 'start-game'
-    // }
-    LOBBY_COMMANDS: 'lobby-commands',
-
-    LOBBY_UPDATES: 'lobby-updates',
-    // players in lobby: names, avatars
-
-    // {
-    //     type: 'game-starting'
-    //     data: sim initial state
-    // }
-    GAME_UPDATES: 'game-updates',
-    GAME_COMMANDS: 'game-commands',
-
-    SIM_UPDATES: 'sim-updates',
-    SIM_COMMANDS: 'sim-commands',
-};
-
-exports.channels = channels;
-
-},{}],46:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 // player starting hp
 // invincibility on hit duration
 // player movement speed
@@ -7120,7 +7004,7 @@ exports.gameconstants = {
     
 };
 
-},{}],47:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 gameevents = {
     ROUND_OVER: 0,
     PLAYER_HIT: 1,
