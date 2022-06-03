@@ -194,7 +194,7 @@ class SceneActiveGame extends Phaser.Scene {
                     setTimeout(() => {
                         this.explosionObject.destroy();
                         this.eliminationAudio.stop();
-                    }, 1000);
+                    }, 2000);
                     break;
                 default:
                     break;
